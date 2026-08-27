@@ -1,286 +1,330 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KIWOLASU — Base Resmi</title>
+<meta name="description" content="Base resmi KIWOLASU. Log update, fitur, dan link download script.">
+<style>
+  :root{
+    --bg: #0b0e11;
+    --panel: #12161c;
+    --panel-2: #171c23;
+    --line: #23292f;
+    --text: #e7eaee;
+    --muted: #7c8592;
+    --violet: #8b6bf0;
+    --violet-dim: #4a3d7a;
+    --amber: #f0a63c;
+    --green: #4fd17a;
+    --red: #ea5b5b;
+    --mono: "JetBrains Mono","Space Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans: "Manrope","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
 
-    <title>Download Center</title>
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  ::selection{background:var(--violet-dim); color:#fff;}
 
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  :focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:3px;
+    border-radius:4px;
+  }
 
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            background: #0f172a;
-            color: #fff;
-            min-height: 100vh;
-        }
+  /* subtle scanline / grid backdrop */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(139,107,240,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139,107,240,0.035) 1px, transparent 1px);
+    background-size: 42px 42px;
+    pointer-events:none;
+    z-index:0;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 90%);
+  }
 
-        .background {
-            position: fixed;
-            inset: 0;
-            background:
-                radial-gradient(circle at 20% 20%, #2563eb55, transparent 35%),
-                radial-gradient(circle at 80% 80%, #7c3aed55, transparent 35%);
-            z-index: -1;
-        }
+  .wrap{max-width:920px; margin:0 auto; padding:0 20px; position:relative; z-index:1;}
 
-        .container {
-            width: 100%;
-            max-width: 900px;
-            margin: auto;
-            padding: 25px;
-        }
+  /* ===== status bar ===== */
+  .statusbar{
+    border-bottom:1px solid var(--line);
+    background:rgba(18,22,28,0.7);
+    backdrop-filter:blur(6px);
+    position:sticky; top:0; z-index:10;
+  }
+  .statusbar .wrap{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-top:12px; padding-bottom:12px;
+    font-family:var(--mono); font-size:12px; color:var(--muted);
+    gap:12px; flex-wrap:wrap;
+  }
+  .statusbar .brand{
+    color:var(--text); font-weight:700; letter-spacing:0.02em;
+    display:flex; align-items:center; gap:8px; font-family:var(--mono);
+  }
+  .statusbar .dot{
+    width:7px; height:7px; border-radius:50%; background:var(--green);
+    box-shadow:0 0 0 3px rgba(79,209,122,0.15);
+    flex:none;
+  }
+  .statusbar .meta{display:flex; gap:16px; flex-wrap:wrap;}
+  .statusbar .meta span{white-space:nowrap;}
+  .statusbar .meta b{color:var(--muted); font-weight:500;}
 
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-        }
+  /* ===== hero ===== */
+  .hero{padding:72px 0 56px;}
+  .hero .tag{
+    font-family:var(--mono); font-size:12px; color:var(--violet);
+    letter-spacing:0.14em; text-transform:uppercase;
+    display:flex; align-items:center; gap:10px; margin-bottom:18px;
+  }
+  .hero .tag::before{content:"//"; color:var(--line); font-weight:700;}
+  .hero h1{
+    font-family:var(--mono);
+    font-size:clamp(34px, 7vw, 58px);
+    line-height:1.05;
+    margin:0 0 18px;
+    letter-spacing:-0.01em;
+  }
+  .hero h1 .cursor{
+    display:inline-block; width:0.5em; background:var(--amber);
+    animation:blink 1s steps(1) infinite; margin-left:2px;
+  }
+  @keyframes blink{50%{opacity:0;}}
+  .hero p.lead{
+    font-size:16px; color:var(--muted); max-width:52ch; margin:0 0 32px;
+  }
+  .hero-actions{display:flex; gap:12px; flex-wrap:wrap;}
+  .btn{
+    font-family:var(--mono); font-size:13px; font-weight:700;
+    padding:13px 22px; border-radius:8px; text-decoration:none;
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid transparent; transition:transform .15s ease, background .15s ease;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--violet); color:#0b0e11;}
+  .btn-primary:hover{background:#a08af5;}
+  .btn-ghost{border-color:var(--line); color:var(--text);}
+  .btn-ghost:hover{border-color:var(--violet);}
 
-        .logo {
-            font-size: 22px;
-            font-weight: bold;
-        }
+  /* ===== section shared ===== */
+  section{padding:52px 0;}
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:16px; margin-bottom:26px; border-bottom:1px solid var(--line); padding-bottom:14px;
+    flex-wrap:wrap;
+  }
+  .section-head h2{
+    font-family:var(--mono); font-size:14px; letter-spacing:0.1em;
+    text-transform:uppercase; margin:0; color:var(--text);
+    display:flex; align-items:center; gap:10px;
+  }
+  .section-head h2::before{content:"$"; color:var(--violet);}
+  .section-head .count{font-family:var(--mono); font-size:12px; color:var(--muted);}
 
-        .logo span {
-            color: #60a5fa;
-        }
+  /* ===== log / patch notes ===== */
+  .log-item{
+    display:grid;
+    grid-template-columns:96px 1fr;
+    gap:18px;
+    padding:18px 0;
+    border-bottom:1px solid var(--line);
+    opacity:0; transform:translateY(10px);
+    transition:opacity .5s ease, transform .5s ease;
+  }
+  .log-item.in{opacity:1; transform:none;}
+  .log-item:last-child{border-bottom:none;}
+  .log-date{
+    font-family:var(--mono); font-size:11px; color:var(--muted); padding-top:3px;
+  }
+  .log-body h3{margin:0 0 6px; font-size:15px; font-weight:700;}
+  .log-body p{margin:0 0 10px; color:var(--muted); font-size:13.5px;}
+  .tag-pill{
+    font-family:var(--mono); font-size:10.5px; padding:2px 8px; border-radius:99px;
+    display:inline-block; margin-right:6px; letter-spacing:0.03em;
+  }
+  .pill-feat{background:rgba(139,107,240,0.14); color:var(--violet);}
+  .pill-fix{background:rgba(79,209,122,0.14); color:var(--green);}
+  .pill-info{background:rgba(240,166,60,0.14); color:var(--amber);}
+  .pill-warn{background:rgba(234,91,91,0.14); color:var(--red);}
 
-        .badge {
-            padding: 8px 14px;
-            background: #ffffff12;
-            border: 1px solid #ffffff18;
-            border-radius: 20px;
-            font-size: 13px;
-            color: #cbd5e1;
-        }
+  /* ===== fitur grid ===== */
+  .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:14px;}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px; transition:border-color .15s ease;
+  }
+  .card:hover{border-color:var(--violet-dim);}
+  .card .icon{font-family:var(--mono); color:var(--violet); font-size:13px; margin-bottom:10px;}
+  .card h3{margin:0 0 8px; font-size:14.5px;}
+  .card p{margin:0; color:var(--muted); font-size:13px;}
 
-        .hero {
-            text-align: center;
-            padding: 80px 20px 50px;
-        }
+  /* ===== cta strip ===== */
+  .cta{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:12px;
+    padding:30px; display:flex; align-items:center; justify-content:space-between;
+    gap:20px; flex-wrap:wrap;
+  }
+  .cta div h3{margin:0 0 6px; font-size:17px;}
+  .cta div p{margin:0; color:var(--muted); font-size:13.5px;}
 
-        .icon {
-            width: 80px;
-            height: 80px;
-            margin: auto auto 25px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            border-radius: 22px;
-            font-size: 38px;
-            box-shadow: 0 15px 40px #0005;
-        }
+  footer{border-top:1px solid var(--line); padding:28px 0; margin-top:20px;}
+  footer .wrap{
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--mono); font-size:11.5px; color:var(--muted); flex-wrap:wrap; gap:10px;
+  }
+  footer a{color:var(--muted); text-decoration:none; margin-left:14px;}
+  footer a:hover{color:var(--violet);}
 
-        h1 {
-            font-size: clamp(34px, 7vw, 60px);
-            margin-bottom: 18px;
-        }
+  @media (max-width:560px){
+    .log-item{grid-template-columns:1fr;}
+    .log-date{padding-top:0;}
+    .cta{flex-direction:column; align-items:flex-start;}
+  }
 
-        .subtitle {
-            max-width: 600px;
-            margin: auto;
-            color: #94a3b8;
-            line-height: 1.7;
-            font-size: 16px;
-        }
-
-        .download-card {
-            max-width: 650px;
-            margin: 20px auto;
-            padding: 28px;
-            background: #ffffff0d;
-            border: 1px solid #ffffff18;
-            border-radius: 20px;
-            backdrop-filter: blur(15px);
-        }
-
-        .file-info {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            text-align: left;
-            margin-bottom: 25px;
-        }
-
-        .file-icon {
-            width: 55px;
-            height: 55px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #3b82f622;
-            border-radius: 14px;
-            font-size: 25px;
-        }
-
-        .file-name {
-            font-weight: bold;
-            margin-bottom: 6px;
-        }
-
-        .file-size {
-            color: #94a3b8;
-            font-size: 13px;
-        }
-
-        .download-btn {
-            width: 100%;
-            display: block;
-            padding: 16px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #3b82f6, #6366f1);
-            color: white;
-            text-decoration: none;
-            font-weight: bold;
-            text-align: center;
-            transition: 0.2s;
-        }
-
-        .download-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px #3b82f655;
-        }
-
-        .features {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-top: 25px;
-        }
-
-        .feature {
-            padding: 20px;
-            text-align: center;
-            background: #ffffff08;
-            border: 1px solid #ffffff12;
-            border-radius: 15px;
-        }
-
-        .feature-icon {
-            font-size: 25px;
-            margin-bottom: 10px;
-        }
-
-        .feature h3 {
-            font-size: 14px;
-            margin-bottom: 6px;
-        }
-
-        .feature p {
-            color: #94a3b8;
-            font-size: 12px;
-        }
-
-        footer {
-            text-align: center;
-            padding: 50px 0 25px;
-            color: #64748b;
-            font-size: 13px;
-        }
-
-        @media (max-width: 600px) {
-            .hero {
-                padding-top: 50px;
-            }
-
-            .features {
-                grid-template-columns: 1fr;
-            }
-
-            .download-card {
-                padding: 20px;
-            }
-        }
-    </style>
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .log-item, .hero h1 .cursor{transition:none; animation:none; opacity:1; transform:none;}
+  }
+</style>
 </head>
-
 <body>
 
-<div class="background"></div>
+  <div class="statusbar">
+    <div class="wrap">
+      <div class="brand"><span class="dot"></span> KIWOLASU</div>
+      <div class="meta">
+        <span><b>status:</b> AKTIF</span>
+        <span><b>versi:</b> 1.5</span>
+        <span id="clock"><b>update:</b> —</span>
+      </div>
+    </div>
+  </div>
 
-<div class="container">
-
-    <header>
-        <div class="logo">Download<span>Center</span></div>
-        <div class="badge">● Online</div>
-    </header>
+  <main class="wrap">
 
     <section class="hero">
-
-        <div class="icon">↓</div>
-
-        <h1>Download Center</h1>
-
-        <p class="subtitle">
-            Download file terbaru dengan cepat dan mudah.
-            Pilih file yang tersedia di bawah ini.
-        </p>
-
+      <div class="tag">base resmi &amp; log update</div>
+      <h1>KIWOLASU<span class="cursor">&nbsp;</span></h1>
+      <p class="lead">
+        Satu-satunya sumber resmi buat download script, baca log update,
+        dan cek pengumuman terbaru. Kalau dapet file dari luar sini,
+        kemungkinan udah ketinggalan versi atau nggak resmi.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#download">↓ Download Script</a>
+        <a class="btn btn-ghost" href="#log">Lihat Log Update</a>
+      </div>
     </section>
 
-    <div class="download-card">
+    <section id="log">
+      <div class="section-head">
+        <h2>log_update.txt</h2>
+        <span class="count">3 entri terbaru</span>
+      </div>
 
-        <div class="file-info">
-
-            <div class="file-icon">
-                📦
-            </div>
-
-            <div>
-                <div class="file-name">
-                    file.zip
-                </div>
-
-                <div class="file-size">
-                    ZIP • Versi 1.0 • 25 MB
-                </div>
-            </div>
-
+      <div class="log-item">
+        <div class="log-date">2026-08-27</div>
+        <div class="log-body">
+          <span class="tag-pill pill-feat">FITUR</span>
+          <h3>Contoh: Sistem whitelist package target</h3>
+          <p>Ganti judul &amp; teks ini sesuai update asli lo — bagian ini cuma placeholder buat nunjukin format log-nya.</p>
         </div>
+      </div>
 
-        <a class="download-btn"
-           href="file.zip"
-           download>
-            ↓ &nbsp; Download File
-        </a>
+      <div class="log-item">
+        <div class="log-date">2026-08-20</div>
+        <div class="log-body">
+          <span class="tag-pill pill-fix">PERBAIKAN</span>
+          <h3>Contoh: Fix inject log gagal sync</h3>
+          <p>Isi ringkas soal bug yang diperbaiki, biar user tau kenapa mereka perlu update.</p>
+        </div>
+      </div>
 
+      <div class="log-item">
+        <div class="log-date">2026-08-10</div>
+        <div class="log-body">
+          <span class="tag-pill pill-info">INFO</span>
+          <h3>Contoh: Jadwal maintenance server</h3>
+          <p>Pengumuman non-teknis juga bisa masuk sini, misal soal downtime atau info komunitas.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="fitur">
+      <div class="section-head">
+        <h2>fitur_unggulan</h2>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <div class="icon">01</div>
+          <h3>Multi-slot injection</h3>
+          <p>Ganti dengan deskripsi fitur asli lo di sini.</p>
+        </div>
+        <div class="card">
+          <div class="icon">02</div>
+          <h3>Presence &amp; chat admin</h3>
+          <p>Ganti dengan deskripsi fitur asli lo di sini.</p>
+        </div>
+        <div class="card">
+          <div class="icon">03</div>
+          <h3>Auto-update via Gist</h3>
+          <p>Ganti dengan deskripsi fitur asli lo di sini.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="download">
+      <div class="cta">
+        <div>
+          <h3>Udah siap coba?</h3>
+          <p>Klik tombol ini buat dapet link download resmi versi terbaru.</p>
+        </div>
+        <a class="btn btn-primary" href="#" target="_blank" rel="noopener">↓ Download Sekarang</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>kiwolasu © 2026</span>
+      <div>
+        <a href="#" target="_blank" rel="noopener">Grup WA</a>
+        <a href="#" target="_blank" rel="noopener">Lapor Bug</a>
+      </div>
     </div>
+  </footer>
 
-    <div class="features">
+<script>
+  // status bar clock (tanggal render halaman)
+  document.getElementById('clock').innerHTML =
+    '<b>update:</b> ' + new Date().toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
 
-        <div class="feature">
-            <div class="feature-icon">⚡</div>
-            <h3>Cepat</h3>
-            <p>Download dengan cepat.</p>
-        </div>
-
-        <div class="feature">
-            <div class="feature-icon">🔒</div>
-            <h3>Aman</h3>
-            <p>File tersedia dari sumber resmi.</p>
-        </div>
-
-        <div class="feature">
-            <div class="feature-icon">✓</div>
-            <h3>Terbaru</h3>
-            <p>Selalu gunakan versi terbaru.</p>
-        </div>
-
-    </div>
-
-    <footer>
-        © 2026 Download Center
-    </footer>
-
-</div>
+  // scroll reveal buat log items
+  const items = document.querySelectorAll('.log-item');
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, {threshold:0.15});
+    items.forEach(el=>io.observe(el));
+  } else {
+    items.forEach(el=>el.classList.add('in'));
+  }
+</script>
 
 </body>
 </html>
