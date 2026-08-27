@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Download Center</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #0f172a;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .background {
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 20%, #2563eb55, transparent 35%),
+                radial-gradient(circle at 80% 80%, #7c3aed55, transparent 35%);
+            z-index: -1;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: auto;
+            padding: 25px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .logo span {
+            color: #60a5fa;
+        }
+
+        .badge {
+            padding: 8px 14px;
+            background: #ffffff12;
+            border: 1px solid #ffffff18;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 80px 20px 50px;
+        }
+
+        .icon {
+            width: 80px;
+            height: 80px;
+            margin: auto auto 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 22px;
+            font-size: 38px;
+            box-shadow: 0 15px 40px #0005;
+        }
+
+        h1 {
+            font-size: clamp(34px, 7vw, 60px);
+            margin-bottom: 18px;
+        }
+
+        .subtitle {
+            max-width: 600px;
+            margin: auto;
+            color: #94a3b8;
+            line-height: 1.7;
+            font-size: 16px;
+        }
+
+        .download-card {
+            max-width: 650px;
+            margin: 20px auto;
+            padding: 28px;
+            background: #ffffff0d;
+            border: 1px solid #ffffff18;
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            text-align: left;
+            margin-bottom: 25px;
+        }
+
+        .file-icon {
+            width: 55px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #3b82f622;
+            border-radius: 14px;
+            font-size: 25px;
+        }
+
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .file-size {
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .download-btn {
+            width: 100%;
+            display: block;
+            padding: 16px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            text-align: center;
+            transition: 0.2s;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px #3b82f655;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .feature {
+            padding: 20px;
+            text-align: center;
+            background: #ffffff08;
+            border: 1px solid #ffffff12;
+            border-radius: 15px;
+        }
+
+        .feature-icon {
+            font-size: 25px;
+            margin-bottom: 10px;
+        }
+
+        .feature h3 {
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .feature p {
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 50px 0 25px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        @media (max-width: 600px) {
+            .hero {
+                padding-top: 50px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .download-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="background"></div>
+
+<div class="container">
+
+    <header>
+        <div class="logo">Download<span>Center</span></div>
+        <div class="badge">● Online</div>
+    </header>
+
+    <section class="hero">
+
+        <div class="icon">↓</div>
+
+        <h1>Download Center</h1>
+
+        <p class="subtitle">
+            Download file terbaru dengan cepat dan mudah.
+            Pilih file yang tersedia di bawah ini.
+        </p>
+
+    </section>
+
+    <div class="download-card">
+
+        <div class="file-info">
+
+            <div class="file-icon">
+                📦
+            </div>
+
+            <div>
+                <div class="file-name">
+                    file.zip
+                </div>
+
+                <div class="file-size">
+                    ZIP • Versi 1.0 • 25 MB
+                </div>
+            </div>
+
+        </div>
+
+        <a class="download-btn"
+           href="file.zip"
+           download>
+            ↓ &nbsp; Download File
+        </a>
+
+    </div>
+
+    <div class="features">
+
+        <div class="feature">
+            <div class="feature-icon">⚡</div>
+            <h3>Cepat</h3>
+            <p>Download dengan cepat.</p>
+        </div>
+
+        <div class="feature">
+            <div class="feature-icon">🔒</div>
+            <h3>Aman</h3>
+            <p>File tersedia dari sumber resmi.</p>
+        </div>
+
+        <div class="feature">
+            <div class="feature-icon">✓</div>
+            <h3>Terbaru</h3>
+            <p>Selalu gunakan versi terbaru.</p>
+        </div>
+
+    </div>
+
+    <footer>
+        © 2026 Download Center
+    </footer>
+
+</div>
+
+</body>
+</html>
