@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ULAR ARENA — Realtime Multiplayer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root{
+    --void: #131720;
+    --void-2: #1a2029;
+    --grid-line: #2a3140;
+    --venom: #93c48d;
+    --venom-dim: #4d6b4a;
+    --plasma: #d99bb0;
+    --plasma-dim: #6b4552;
+    --gold: #d9bd7d;
+    --ice: #85b6c9;
+    --ash: #8892a6;
+    --white: #eef2fa;
+    --grad-venom: linear-gradient(135deg, #a9d1a3 0%, #6f9a6a 100%);
+    --grad-plasma: linear-gradient(135deg, #e6b3c4 0%, #b06b83 100%);
+    --grad-cool: linear-gradient(135deg, #9cc7d6 0%, #5f8a99 100%);
+    --grad-gold: linear-gradient(135deg, #e6cf9e 0%, #b3934f 100%);
+  }
+
+  *{
+    box-sizing:border-box; -webkit-tap-highlight-color: transparent;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
+  input{ -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
+
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: linear-gradient(160deg, #171c26 0%, #10141c 55%, #0d1117 100%);
+    color: var(--white);
+    font-family: 'JetBrains Mono', monospace;
+    overflow:hidden;
+    overscroll-behavior: none;
+  }
+
+  body{
+    display:flex; flex-direction:column;
+    height:100vh; height:100dvh;
+  }
+
+  h1,h2,h3{ font-family:'Space Grotesk', sans-serif; margin:0; }
+
+  #topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, #1e2530, #12161f);
+    border-bottom: 1px solid var(--grid-line);
+    flex-shrink:0;
+  }
+  #logo{
+    font-size: 18px; font-weight:700; letter-spacing:0.5px;
+    color: var(--venom);
+    display:flex; align-items:center; gap:8px;
+  }
+  #logo .dot{ width:8px; height:8px; border-radius:50%; background:var(--venom); box-shadow:0 0 8px var(--venom); }
+  #logo .dot.off{ background:#555; box-shadow:none; }
+  #liveCount{
+    font-size:12px; color:var(--ash); display:flex; align-items:center; gap:6px;
+  }
+  #liveCount b{ color:var(--white); }
+  #connStatus{ font-size:10px; color: var(--ash); }
+  #connStatus.ok{ color: var(--venom); }
+  #connStatus.err{ color: var(--plasma); }
+  #changeNameBtn{
+    font-size:11px; color:var(--ash); text-decoration:underline;
+    cursor:pointer; flex-shrink:0; margin-left:10px;
+    display:none;
+  }
+  #changeNameBtn.visible{ display:inline; }
+  #changeNameBtn:hover{ color:var(--white); }
+
+  #screen-join, #screen-game, #screen-dead{
+    flex:1; display:flex; flex-direction:column; min-height:0;
+  }
+  .hidden{ display:none !important; }
+
+  #screen-join{
+    align-items:center; justify-content:flex-start; padding: 16px 24px;
+    text-align:center;
+    gap: 14px;
+    overflow-y:auto;
+  }
+  #joinCard{
+    width:100%; max-width: 360px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  #joinCard h2{
+    font-size: 24px; line-height:1.15; color:var(--white);
+  }
+  #joinCard h2 span{ color:var(--venom); }
+  #joinSub{ color:var(--ash); font-size:13px; line-height:1.5; }
+
+  input#nameInput{
+    background: var(--void-2);
+    border: 1.5px solid var(--grid-line);
+    color: var(--white);
+    font-family:'JetBrains Mono', monospace;
+    font-size:16px;
+    padding: 13px 14px;
+    border-radius: 3px;
+    outline:none;
+    text-align:center;
+    letter-spacing: 0.5px;
+  }
+  input#nameInput:focus{ border-color: var(--venom); }
+
+  .pickLabel{ font-size:10px; letter-spacing:1px; color:var(--ash); }
+  #headRow{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .headOpt{
+    width:38px; height:38px; border-radius:10px;
+    border: 2px solid var(--grid-line);
+    background: var(--void-2);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; line-height:1;
+  }
+  .headOpt.selected{ border-color: var(--white); background:#1a2233; }
+
+  #colorPicker{ display:flex; align-items:center; gap:14px; justify-content:center; }
+  #hueSlider{
+    -webkit-appearance:none; appearance:none;
+    width:210px; height:16px; border-radius:8px;
+    background: linear-gradient(to right,
+      #ff3b3b, #ff9a3b, #ffe33b, #9aff3b, #3bff6e,
+      #3bffd9, #3bc7ff, #3b6eff, #9a3bff, #ff3bd9, #ff3b3b);
+    outline:none; cursor:pointer;
+    border: 1px solid var(--grid-line);
+  }
+  #hueSlider::-webkit-slider-thumb{
+    -webkit-appearance:none; width:24px; height:24px; border-radius:50%;
+    background:#fff; border:3px solid var(--void);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.6), 0 2px 6px rgba(0,0,0,0.5);
+    cursor:pointer; margin-top:-1px;
+  }
+  #hueSlider::-moz-range-thumb{
+    width:24px; height:24px; border-radius:50%;
+    background:#fff; border:3px solid var(--void);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.6), 0 2px 6px rgba(0,0,0,0.5);
+    cursor:pointer;
+  }
+  #colorPreview{
+    width:36px; height:36px; border-radius:50%;
+    border:2px solid var(--white);
+    flex-shrink:0;
+    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  }
+
+  button#playBtn{
+    background: var(--grad-venom);
+    color: #16311a;
+    border:none;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    padding: 14px;
+    border-radius: 3px;
+    cursor:pointer;
+    letter-spacing:0.3px;
+  }
+  button#playBtn:active{ transform: scale(0.98); }
+  button#playBtn:disabled{ opacity:0.4; }
+
+  #playerList{
+    display:flex; flex-wrap:wrap; gap:6px; justify-content:center;
+    max-width: 360px;
+  }
+  .pchip{
+    font-size:11px; color:var(--ash); border:1px solid var(--grid-line);
+    padding:4px 9px; border-radius: 20px;
+    display:flex; align-items:center; gap:5px;
+  }
+  .pchip .sq{ width:7px; height:7px; border-radius:2px; }
+
+  #gameWrap{
+    flex:1; position:relative; min-height:0;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(ellipse at 50% 0%, #1c2432 0%, #12161f 60%, #0d1017 100%);
+  }
+  canvas#board{
+    max-width:100%; max-height:100%;
+    background: var(--void-2);
+    box-shadow: 0 0 0 1px var(--grid-line), 0 20px 60px rgba(0,0,0,0.5);
+    touch-action:none;
+  }
+
+  #hud{
+    position:absolute; top:10px; left:10px; right:10px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    pointer-events:none;
+  }
+  #scoreTag{
+    background: linear-gradient(135deg, rgba(26,32,44,0.9), rgba(14,17,23,0.88));
+    border:1px solid var(--grid-line);
+    padding: 6px 12px; border-radius:3px;
+    font-size:13px;
+  }
+  #scoreTag b{ color: var(--gold); }
+  #myNameTag{ color: var(--venom); font-weight:700; margin-right:8px; padding-right:8px; border-right:1px solid var(--grid-line); }
+
+  #board2{
+    background: linear-gradient(135deg, rgba(26,32,44,0.9), rgba(14,17,23,0.88));
+    border:1px solid var(--grid-line);
+    padding: 8px 10px; border-radius:3px;
+    font-size:11px; min-width:120px;
+  }
+  #board2 .row{ display:flex; justify-content:space-between; gap:10px; padding:2px 0; }
+  #board2 .row .nm{ color:var(--white); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80px; }
+  #board2 .row .sc{ color:var(--ash); }
+  #board2 h4{ font-size:10px; letter-spacing:1px; color:var(--ash); margin:0 0 6px 0; font-weight:400; }
+
+  #brakeBtn{
+    position:absolute; bottom:22px; right:16px;
+    width:64px; height:64px; border-radius:50%;
+    background: linear-gradient(145deg, #e3a4b8, #b06b83);
+    border:1px solid var(--grid-line);
+    color:#3a1520;
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:12px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; user-select:none; -webkit-user-select:none;
+    box-shadow: 0 0 14px rgba(217,155,176,0.35);
+    z-index:5;
+  }
+  #brakeBtn.active{
+    background: linear-gradient(145deg, #a9d1a3, #6f9a6a);
+    box-shadow: 0 0 14px rgba(147,196,141,0.35);
+    color:#16311a;
+  }
+
+  #chatPrompt{
+    position:absolute; bottom:160px; left:50%; transform:translateX(-50%);
+    background: rgba(20,26,40,0.9);
+    border:1.5px solid var(--grid-line);
+    color:var(--white);
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:20px;
+    cursor:pointer; user-select:none; -webkit-user-select:none;
+    z-index:6;
+  }
+  #chatPrompt.hidden{ display:none; }
+  #chatPrompt:active{ background: rgba(30,38,56,0.95); }
+
+  #chatBox{
+    position:absolute; bottom:160px; left:50%; transform:translateX(-50%);
+    width:min(320px, 86%);
+    display:flex; gap:6px;
+    z-index:6;
+  }
+  #chatBox.hidden{ display:none; }
+  #chatInput{
+    flex:1;
+    background: rgba(10,14,23,0.9);
+    border:1.5px solid var(--grid-line);
+    color:var(--white);
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    padding:10px 12px;
+    border-radius:20px;
+    outline:none;
+  }
+  #chatInput:focus{ border-color: var(--venom); }
+  #chatSendBtn{
+    background: var(--grad-venom); color:#16311a; border:none; border-radius:50%;
+    width:40px; height:40px; font-size:16px; cursor:pointer; flex-shrink:0;
+  }
+
+  #joystick{
+    position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
+    width:118px; height:118px; border-radius:50%;
+    background: rgba(20,26,40,0.55);
+    border:1px solid var(--grid-line);
+    touch-action:none;
+  }
+  #joyKnob{
+    position:absolute; top:50%; left:50%;
+    width:52px; height:52px; margin:-26px 0 0 -26px;
+    border-radius:50%;
+    background: linear-gradient(145deg, #a9d1a3, #6f9a6a);
+    box-shadow:0 0 14px rgba(147,196,141,0.35);
+    transition: transform 0.05s linear;
+    pointer-events:none;
+  }
+
+  #screen-dead{
+    align-items:center; justify-content:center; text-align:center; padding:24px; gap:16px;
+  }
+  #screen-dead h2{ font-size:26px; }
+  #deadReason{ color:var(--ash); font-size:13px; }
+  #finalScore{ font-size:42px; color:var(--gold); font-family:'Space Grotesk',sans-serif; font-weight:700; }
+  button#respawnBtn{
+    background: var(--grad-plasma); color:#3a1520; border:none;
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:15px;
+    padding:13px 26px; border-radius:3px; cursor:pointer;
+  }
+
+  #hofBox{
+    width:100%; max-width:360px;
+    border:1px solid var(--grid-line);
+    border-radius:3px;
+    padding:12px 14px;
+    text-align:left;
+  }
+  #hofBox h4{
+    font-size:11px; letter-spacing:1px; color:var(--gold); margin:0 0 8px 0; font-weight:400;
+  }
+  .hofRow{ display:flex; align-items:center; gap:8px; padding:4px 0; font-size:12px; }
+  .hofRow .rank{ color:var(--ash); width:18px; flex-shrink:0; }
+  .hofRow .sq{ width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+  .hofRow .nm{ flex:1; color:var(--white); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hofRow .sc{ color:var(--gold); font-weight:600; }
+
+  #hofDead{
+    width:100%; max-width:320px;
+    border:1px solid var(--grid-line);
+    border-radius:3px;
+    padding:10px 14px;
+    text-align:left;
+  }
+  #hofDead h4{ font-size:11px; letter-spacing:1px; color:var(--gold); margin:0 0 8px 0; font-weight:400; }
+
+  @media (hover:hover) and (pointer:fine){
+    #joystick{ display:none; }
+  }
+
+  /* landscape (phone dimiringkan): geser joystick ke pinggir kiri, tapi
+     tetap kasih jarak dari tepi layar biar jempol punya ruang gerak yang
+     sama rata ke kiri maupun ke kanan */
+  @media (orientation: landscape){
+    #joystick{ left:36px; transform:none; }
+    /* area tengah kanvas dipakai buat main, jadi kolom pesan dipindah ke
+       ruang kosong di sisi kanan, dinaikkan & digeser ke tengah dikit
+       biar tidak mepet ke tepi/keyboard, dan dibuat lebih transparan */
+    #chatPrompt, #chatBox{
+      left:auto; right:34px; transform:none;
+      bottom:230px;
+    }
+    #chatBox{ width:min(220px, 34vw); }
+    #chatPrompt{ background: rgba(20,26,40,0.55); }
+    #chatInput{ background: rgba(10,14,23,0.55); }
+    /* arena dirapatkan ke atas biar tidak ada jarak kosong di atasnya */
+    #gameWrap{ align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+  <div id="topbar">
+    <div id="logo"><span class="dot" id="connDot"></span>ULAR ARENA</div>
+    <div id="liveCount">pemain online: <b id="liveNum">0</b> <span id="connStatus">menghubungkan…</span></div>
+    <div id="changeNameBtn">Simpan &amp; Keluar</div>
+  </div>
+
+  <div id="screen-join">
+    <div id="joinCard">
+      <h2>Masuk <span>arena</span> &amp; jadi ular terpanjang.</h2>
+      <div id="joinSub">kiwolasu project</div>
+      <input id="nameInput" maxlength="12" placeholder="NAMA KAMU" autocomplete="off">
+      <div class="pickLabel">PILIH KEPALA</div>
+      <div id="headRow"></div>
+      <div class="pickLabel">PILIH WARNA</div>
+      <div id="colorPicker">
+        <input type="range" id="hueSlider" min="0" max="359" value="115">
+        <div id="colorPreview"></div>
+      </div>
+      <button id="playBtn">MASUK ARENA</button>
+      <div id="playerList"></div>
+      <div id="hofBox">
+        <h4>🏆 JUARA SEPANJANG MASA</h4>
+        <div id="hofRows">memuat…</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-game" class="hidden">
+    <div id="gameWrap">
+      <canvas id="board"></canvas>
+      <div id="hud">
+        <div id="scoreTag"><span id="myNameTag"></span>Panjang: <b id="scoreNum">1</b></div>
+        <div id="board2">
+          <h4>PAPAN SKOR</h4>
+          <div id="boardRows"></div>
+        </div>
+      </div>
+      <div id="joystick">
+        <div id="joyKnob"></div>
+      </div>
+      <div id="brakeBtn">REM</div>
+      <div id="chatPrompt" class="hidden">✎ Tulis pesan</div>
+      <div id="chatBox" class="hidden">
+        <input id="chatInput" maxlength="40" placeholder="ketik pesan…" autocomplete="off">
+        <button id="chatSendBtn">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-dead" class="hidden">
+    <h2>KAMU MATI</h2>
+    <div id="deadReason">—</div>
+    <div id="finalScore">0</div>
+    <button id="respawnBtn">MAIN LAGI</button>
+    <div id="hofDead">
+      <h4>🏆 JUARA SEPANJANG MASA</h4>
+      <div id="hofRowsDead">memuat…</div>
+    </div>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ============ CONFIG ============
+  const FB_BASE = "https://pucuk-9d1d6-default-rtdb.asia-southeast1.firebasedatabase.app";
+  const ROOM = "ular_arena"; // namespace di dalam database biar rapi
+
+  const COLS = 90, ROWS = 60;
+  const POLL_MS = 300;
+  const STALE_MS = 1000;
+  const FOOD_COUNT = 160;
+  const HEADS = ['3d-pensive'];  // emoji 3D pensive/sedih
+
+  // ---- custom color: any hue the user picks, lightness/saturation locked
+  // in a range so the result is never black (or washed-out white) ----
+  const HUE_S = 68, HUE_L = 55;
+  function hslToHex(h, s, l){
+    s/=100; l/=100;
+    const k = n => (n + h/30) % 12;
+    const a = s * Math.min(l, 1-l);
+    const f = n => l - a*Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n), 1)));
+    const toHex = x => Math.round(255*x).toString(16).padStart(2,'0');
+    return '#' + toHex(f(0)) + toHex(f(8)) + toHex(f(4));
+  }
+
+  // ============ STATE ============
+  let myId = null, myName = '', myColor = { n:'custom', hex: hslToHex(115, HUE_S, HUE_L) }, myHead = HEADS[0];
+  let head = {x:6,y:6}, angle = 0;
+  let trail = [], distSinceTrail = 0, mySegsCache = [];
+  let alive = false;
+  let score = 3;
+  let foodList = [];
+  let others = {};
+  // interpolation state for other players: renders them smoothly BETWEEN network
+  // updates instead of snapping every ~130ms (which is what read as choppy/15fps
+  // movement, especially noticeable when passing close to another snake)
+  const netState = {}; // pid -> { fromSegs, toSegs, tStart, tEnd, lastRaw }
+  const NET_INTERP_MS = 160; // slightly above the 130ms publish interval to absorb jitter
+  let deathReason = '';
+  let braking = false;
+  let myChatMsg = '', myChatTs = 0;
+
+  const SPEED = 5.4;         // cell units per second
+  const TURN_RATE = 2.6;     // radians per second at full steering input
+  const SEG_SPACING = 0.62;  // distance between body segments
+  const HEAD_R = 0.46, BODY_R = 0.44, FOOD_R = 0.52;
+  const MIN_TRAIL_STEP = 0.12;
+  // buffer big enough that a score of ~500 doesn't hit the cap (500 segs * SEG_SPACING / MIN_TRAIL_STEP)
+  const TRAIL_MAX = 2600;
+  const MAX_NET_SEGMENTS = 70;
+  const SELF_SKIP = 7;
+  const CHAT_DURATION_MS = 6000;
+  const CAM_DIST = 4.2, CAM_HEIGHT = 3.0, CAM_LOOK_AHEAD = 2.4;
+
+  // ============ DOM / THREE.JS SCENE ============
+  const $ = id => document.getElementById(id);
+  const canvas = $('board');
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x171c26);
+  scene.fog = new THREE.Fog(0x171c26, 16, 70);
+
+  const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 160);
+  camera.position.set(0, CAM_HEIGHT, -CAM_DIST);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+  scene.add(new THREE.AmbientLight(0x9aa6c2, 0.8));
+  const sun = new THREE.DirectionalLight(0xf5efe0, 0.62);
+  sun.position.set(14, 24, 8);
+  scene.add(sun);
+  const fillLight = new THREE.HemisphereLight(0x3d4f7a, 0x14181f, 0.45);
+  scene.add(fillLight);
+
+  const headLight = new THREE.PointLight(0x93c48d, 1.1, 8, 2);
+  scene.add(headLight);
+
+  function makeGridTexture(){
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const grd = g.createLinearGradient(0,0,64,64);
+    grd.addColorStop(0, '#1c222d');
+    grd.addColorStop(1, '#171b24');
+    g.fillStyle = grd;
+    g.fillRect(0,0,64,64);
+    g.strokeStyle = 'rgba(255,255,255,0.06)';
+    g.lineWidth = 2;
+    g.strokeRect(0,0,64,64);
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(COLS, ROWS);
+    return tex;
+  }
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(COLS, ROWS),
+    new THREE.MeshStandardMaterial({ map: makeGridTexture(), roughness: 0.95 })
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+
+  // glowing perimeter fence — marks the wrap-around edge clearly instead of
+  // letting it fade into darkness (self-lit material, ignores scene lighting)
+  function makeBoundary(){
+    const group = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({ color: 0x93c48d, transparent: true, opacity: 0.75 });
+    const h = 0.55, th = 0.14;
+    const halfW = COLS/2, halfH = ROWS/2;
+    const geoH = new THREE.BoxGeometry(COLS + th, h, th);
+    const geoV = new THREE.BoxGeometry(th, h, ROWS + th);
+    const top = new THREE.Mesh(geoH, mat); top.position.set(0, h/2, -halfH);
+    const bottom = new THREE.Mesh(geoH, mat); bottom.position.set(0, h/2, halfH);
+    const left = new THREE.Mesh(geoV, mat); left.position.set(-halfW, h/2, 0);
+    const right = new THREE.Mesh(geoV, mat); right.position.set(halfW, h/2, 0);
+    group.add(top, bottom, left, right);
+    // soft under-glow so the fence lights up the ground near it too
+    [[0,-halfH],[0,halfH],[-halfW,0],[halfW,0]].forEach(([x,z]) => {
+      const glow = new THREE.PointLight(0x93c48d, 0.35, 9, 2);
+      glow.position.set(x, 1, z);
+      group.add(glow);
+    });
+    return group;
+  }
+  scene.add(makeBoundary());
+
+  function cellToWorld(cx, cy){ return { x: cx - COLS/2, z: cy - ROWS/2 }; }
+
+  const playerMeshes = {}; // id -> { trailLine, headMesh, ... }
+
+  // ---- tail as a flat line that "burns" a mark into the floor ----
+  // one draw call per snake instead of dozens of sphere meshes: much lighter.
+  // Uses LineSegments (independent pairs) instead of a strip so we can break
+  // the line wherever the snake wraps through a wall, instead of it stretching
+  // clear across the arena.
+  const MAX_TRAIL_POINTS = 520;
+  const TRAIL_Y = 0.03; // just above ground to avoid z-fighting
+  function createTrailLine(colorHex){
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(MAX_TRAIL_POINTS * 2 * 3); // worst case: every pair is its own segment
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setDrawRange(0, 0);
+    const mat = new THREE.LineBasicMaterial({ color: colorHex, transparent: true, opacity: 0.85, depthWrite: false });
+    const line = new THREE.LineSegments(geo, mat);
+    line.frustumCulled = false;
+    return line;
+  }
+
+  // ---- 3D Emoji Head Creator ----
+  function create3DPensiveFace() {
+    const group = new THREE.Group();
+    
+    // Head sphere
+    const headGeo = new THREE.SphereGeometry(0.8, 32, 32);
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc4d, roughness: 0.5, metalness: 0.05 });
+    const head = new THREE.Mesh(headGeo, headMat);
+    group.add(head);
+
+    // Helper to place features on sphere surface
+    function placeOnSphere(mesh, lat, lon, radius) {
+      const phi = (90 - lat) * (Math.PI / 180);
+      const theta = (lon + 90) * (Math.PI / 180);
+      mesh.position.set(
+        radius * Math.sin(phi) * Math.cos(theta),
+        radius * Math.cos(phi),
+        radius * Math.sin(phi) * Math.sin(theta)
+      );
+      mesh.lookAt(mesh.position.clone().multiplyScalar(2));
+    }
+
+    // Eyes
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x3b2e2e, roughness: 0.3 });
+    function makeEye(lon) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), eyeMat);
+      eye.scale.set(1, 0.55, 0.6);
+      placeOnSphere(eye, 15, lon, 0.8);
+      group.add(eye);
+      const lid = new THREE.Mesh(new THREE.SphereGeometry(0.19, 16, 16), headMat);
+      lid.scale.set(1.05, 0.5, 0.6);
+      placeOnSphere(lid, 24, lon, 0.8);
+      group.add(lid);
+    }
+    makeEye(-32);
+    makeEye(32);
+
+    // Eyebrows
+    const browMat = new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.6 });
+    function makeBrow(lon, tilt) {
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.07, 0.05), browMat);
+      placeOnSphere(brow, 38, lon, 0.8);
+      brow.rotation.z = tilt;
+      group.add(brow);
+    }
+    makeBrow(-30, 0.35);
+    makeBrow(30, -0.35);
+
+    // Mouth
+    const mouthMat = new THREE.MeshStandardMaterial({ color: 0x8a5a3c, roughness: 0.6 });
+    const mouthCurve = new THREE.Shape();
+    mouthCurve.moveTo(-0.32, 0);
+    mouthCurve.quadraticCurveTo(0, -0.14, 0.32, 0);
+    mouthCurve.quadraticCurveTo(0, -0.05, -0.32, 0);
+    const mouthGeo = new THREE.ShapeGeometry(mouthCurve);
+    const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+    placeOnSphere(mouth, -28, 0, 0.8);
+    group.add(mouth);
+
+    // Blush
+    const blushMat = new THREE.MeshStandardMaterial({ color: 0xff8a80, roughness: 0.8, transparent: true, opacity: 0.55 });
+    function makeBlush(lon) {
+      const blush = new THREE.Mesh(new THREE.CircleGeometry(0.28, 16), blushMat);
+      placeOnSphere(blush, -5, lon, 0.8);
+      group.add(blush);
+    }
+    makeBlush(-55);
+    makeBlush(55);
+
+    // Tear
+    const tearMat = new THREE.MeshStandardMaterial({ color: 0x5dd6ff, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.9 });
+    const tearShape = new THREE.Shape();
+    tearShape.moveTo(0, 0.28);
+    tearShape.quadraticCurveTo(0.18, 0, 0, -0.24);
+    tearShape.quadraticCurveTo(-0.18, 0, 0, 0.28);
+    const tearGeo = new THREE.ExtrudeGeometry(tearShape, { depth: 0.05, bevelEnabled: true, bevelSize: 0.015, bevelThickness: 0.015 });
+    const tear = new THREE.Mesh(tearGeo, tearMat);
+    tear.scale.set(0.44, 0.44, 0.44);
+    placeOnSphere(tear, 5, 45, 0.8);
+    group.add(tear);
+
+    group.scale.set(0.6, 0.6, 0.6);  // scale down slightly untuk fitting dengan game
+    return group;
+  }
+
+  // ---- emoji head textures: shared cache, same emoji reused across all players ----
+  const emojiTextureCache = {};
+  function getEmojiTexture(emoji){
+    if(emojiTextureCache[emoji]) return emojiTextureCache[emoji];
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    g.font = '96px "Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(emoji, 64, 70);
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    emojiTextureCache[emoji] = tex;
+    return tex;
+  }
+
+  function roundRect(g, x, y, w, h, r){
+    g.beginPath();
+    g.moveTo(x+r, y);
+    g.arcTo(x+w, y, x+w, y+h, r);
+    g.arcTo(x+w, y+h, x, y+h, r);
+    g.arcTo(x, y+h, x, y, r);
+    g.arcTo(x, y, x+w, y, r);
+    g.closePath();
+    g.fill();
+  }
+  // ---- name-tag texture: one per player, rebuilt only when name/color changes ----
+  function makeNameTexture(text, colorHex){
+    const fontSize = 34, padX = 16;
+    const measure = document.createElement('canvas').getContext('2d');
+    measure.font = `700 ${fontSize}px 'Space Grotesk', sans-serif`;
+    const textW = Math.max(20, measure.measureText(text || '').width);
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(textW + padX*2);
+    c.height = 56;
+    const g = c.getContext('2d');
+    g.font = `700 ${fontSize}px 'Space Grotesk', sans-serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(10,14,23,0.55)';
+    roundRect(g, 2, 2, c.width-4, c.height-4, 10);
+    g.fillStyle = colorHex;
+    g.fillText(text || '', c.width/2, c.height/2 + 2);
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return { tex, aspect: c.width / c.height };
+  }
+
+  // ---- chat-bubble texture: one per player, rebuilt when the message text changes ----
+  function makeChatTexture(text, colorHex){
+    const fontSize = 28, padX = 18;
+    const measure = document.createElement('canvas').getContext('2d');
+    measure.font = `600 ${fontSize}px 'JetBrains Mono', monospace`;
+    const textW = Math.max(20, measure.measureText(text || '').width);
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(textW + padX*2);
+    c.height = 50;
+    const g = c.getContext('2d');
+    g.fillStyle = '#eef2fa';
+    roundRect(g, 2, 2, c.width-4, c.height-4, 14);
+    g.strokeStyle = colorHex;
+    g.lineWidth = 3;
+    g.beginPath();
+    if(g.roundRect) g.roundRect(3, 3, c.width-6, c.height-6, 12);
+    g.stroke();
+    g.font = `600 ${fontSize}px 'JetBrains Mono', monospace`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#0a0e17';
+    g.fillText(text || '', c.width/2, c.height/2 + 2);
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return { tex, aspect: c.width / c.height };
+  }
+
+  function computeHeadingFromSegs(segs){
+    if(segs.length < 2) return null;
+    const a = segs[0], b = segs[1];
+    const dx = wrapDelta(a.x - b.x, COLS), dy = wrapDelta(a.y - b.y, ROWS);
+    if(Math.hypot(dx, dy) < 1e-6) return null;
+    return Math.atan2(dy, dx);
+  }
+
+  // wrap-aware lerp of a single cell coordinate pair
+  function lerpCellWrapped(pa, pb, t){
+    const dx = wrapDelta(pb.x - pa.x, COLS), dy = wrapDelta(pb.y - pa.y, ROWS);
+    let x = pa.x + dx*t, y = pa.y + dy*t;
+    x = ((x % COLS) + COLS) % COLS;
+    y = ((y % ROWS) + ROWS) % ROWS;
+    return { x, y };
+  }
+
+  // renders an other-player's body smoothly between the last two network
+  // snapshots instead of snapping to whatever arrived most recently
+  function interpolateOtherSegs(st, now){
+    const span = st.tEnd - st.tStart;
+    const t = span > 0 ? Math.min(1, Math.max(0, (now - st.tStart)/span)) : 1;
+    const a = st.fromSegs, b = st.toSegs;
+    const n = Math.min(a.length, b.length);
+    const out = new Array(n);
+    for(let i=0;i<n;i++) out[i] = lerpCellWrapped(a[i], b[i], t);
+    // snake grew since last snapshot — just tack on the new tail points as-is,
+    // popping in one extra segment is unnoticeable and avoids array-length mismatches
+    for(let i=n;i<b.length;i++) out.push(b[i]);
+    return out;
+  }
+
+  function updateSnakeMeshes(id, segs, colorHex, headEmoji, displayName, chatMsg, chatTs, headingAngle){
+    let pool = playerMeshes[id];
+    if(!pool){
+      const trailLine = createTrailLine(colorHex);
+      scene.add(trailLine);
+      const headMesh = create3DPensiveFace();
+      scene.add(headMesh);
+      const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent:true, depthWrite:false }));
+      scene.add(nameSprite);
+      const chatSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent:true, depthWrite:false }));
+      chatSprite.visible = false;
+      scene.add(chatSprite);
+      pool = playerMeshes[id] = { trailLine, colorHex, headMesh, nameSprite, chatSprite, headEmoji: null, name: null, chatMsg: null, facingAngle: Math.PI/2 };
+    } else if(pool.colorHex !== colorHex){
+      pool.trailLine.material.color.set(colorHex);
+      pool.colorHex = colorHex;
+    }
+
+    if(pool.headEmoji !== headEmoji){
+      pool.headEmoji = headEmoji;
+    }
+    if(pool.name !== displayName){
+      if(pool.nameSprite.material.map) pool.nameSprite.material.map.dispose();
+      const { tex, aspect } = makeNameTexture(displayName, colorHex);
+      pool.nameSprite.material.map = tex;
+      pool.nameSprite.material.needsUpdate = true;
+      pool.nameSprite.scale.set(0.6*aspect, 0.6, 1);
+      pool.name = displayName;
+    }
+
+    const chatActive = !!chatMsg && (Date.now() - chatTs) < CHAT_DURATION_MS;
+    if(chatActive && pool.chatMsg !== chatMsg){
+      if(pool.chatSprite.material.map) pool.chatSprite.material.map.dispose();
+      const { tex, aspect } = makeChatTexture(chatMsg, colorHex);
+      pool.chatSprite.material.map = tex;
+      pool.chatSprite.material.needsUpdate = true;
+      pool.chatSprite.scale.set(0.8*aspect, 0.8, 1);
+      pool.chatMsg = chatMsg;
+    } else if(!chatActive){
+      pool.chatMsg = null;
+    }
+
+    // tail: whole body drawn as broken line segments "scorched" onto the floor —
+    // no per-segment meshes. Pairs that jump across the wrap-around edge are
+    // skipped so the line breaks at the wall instead of stretching across the map.
+    const posAttr = pool.trailLine.geometry.attributes.position;
+    const n = Math.min(segs.length, MAX_TRAIL_POINTS);
+    let vi = 0;
+    for(let i=1;i<n;i++){
+      const a = segs[i-1], b = segs[i];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      if(Math.abs(dx) > COLS/2 || Math.abs(dy) > ROWS/2) continue; // wrap jump — break the line here
+      const wa = cellToWorld(a.x, a.y);
+      const wb = cellToWorld(b.x, b.y);
+      posAttr.setXYZ(vi++, wa.x, TRAIL_Y, wa.z);
+      posAttr.setXYZ(vi++, wb.x, TRAIL_Y, wb.z);
+    }
+    posAttr.needsUpdate = true;
+    pool.trailLine.geometry.setDrawRange(0, vi);
+    pool.trailLine.visible = vi > 0;
+
+    if(segs.length > 0){
+      const s = segs[0];
+      const w = cellToWorld(s.x, s.y);
+      const headY = HEAD_R + 0.2;
+      pool.headMesh.position.set(w.x, headY, w.z);
+      pool.headMesh.visible = true;
+      // face the direction of travel (model's default facing = +z, i.e. angle = PI/2)
+      const heading = headingAngle !== null && headingAngle !== undefined
+        ? headingAngle
+        : (computeHeadingFromSegs(segs) ?? pool.facingAngle);
+      pool.facingAngle = heading;
+      pool.headMesh.rotation.y = Math.PI/2 - heading;
+      const nameY = headY + 0.8 + 0.3 + 0.06; // adjusted for 3D head height
+      // own name is shown in the HUD instead of floating above the head;
+      // other players still see it above our head (rendered on their client via their own updateSnakeMeshes call)
+      pool.nameSprite.position.set(w.x, nameY, w.z);
+      pool.nameSprite.visible = (id !== 'self');
+      pool.chatSprite.visible = chatActive;
+      if(chatActive){
+        const chatY = nameY + 0.3 + 0.4 + 0.06; // + nameSprite half + chatSprite half + gap
+        pool.chatSprite.position.set(w.x, chatY, w.z);
+      }
+    } else {
+      pool.headMesh.visible = false;
+      pool.nameSprite.visible = false;
+      pool.chatSprite.visible = false;
+      pool.trailLine.visible = false;
+    }
+  }
+  function removeStalePlayers(activeIds){
+    for(const id in playerMeshes){
+      if(!activeIds.has(id)){
+        const pool = playerMeshes[id];
+        scene.remove(pool.trailLine);
+        pool.trailLine.geometry.dispose();
+        pool.trailLine.material.dispose();
+        scene.remove(pool.headMesh);
+        // Dispose 3D head materials
+        pool.headMesh.traverse(child => {
+          if(child.geometry) child.geometry.dispose();
+          if(child.material) {
+            if(Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+            else child.material.dispose();
+          }
+        });
+        scene.remove(pool.nameSprite);
+        if(pool.nameSprite.material.map) pool.nameSprite.material.map.dispose();
+        pool.nameSprite.material.dispose();
+        scene.remove(pool.chatSprite);
+        if(pool.chatSprite.material.map) pool.chatSprite.material.map.dispose();
+        pool.chatSprite.material.dispose();
+        delete playerMeshes[id];
+      }
+    }
+  }
+
+  const foodGeo = new THREE.IcosahedronGeometry(FOOD_R*0.9, 0);
+  const foodMat = new THREE.MeshStandardMaterial({ color:0xd9bd7d, emissive:0xd9bd7d, emissiveIntensity:0.4, roughness:0.4 });
+  let foodMeshes = [];
+  function updateFoodMeshes(){
+    while(foodMeshes.length < foodList.length){
+      const m = new THREE.Mesh(foodGeo, foodMat);
+      scene.add(m);
+      foodMeshes.push(m);
+    }
+    const t = performance.now()*0.001;
+    for(let i=0;i<foodList.length;i++){
+      const f = foodList[i];
+      if(!f) continue;
+      const w = cellToWorld(f.x, f.y);
+      const mesh = foodMeshes[i];
+      mesh.position.set(w.x, 0.35 + Math.sin(t*2+i)*0.08, w.z);
+      mesh.rotation.set(t*0.8, t*1.5+i, 0);
+    }
+  }
+
+  function updateCamera(){
+    const w = cellToWorld(head.x, head.y);
+    const fx = Math.cos(angle), fz = Math.sin(angle);
+    const desired = new THREE.Vector3(w.x - fx*CAM_DIST, CAM_HEIGHT, w.z - fz*CAM_DIST);
+    camera.position.lerp(desired, 0.14);
+    camera.lookAt(w.x + fx*CAM_LOOK_AHEAD, 0.6, w.z + fz*CAM_LOOK_AHEAD);
+    headLight.position.set(w.x, 1.2, w.z);
+  }
+
+  function resizeCanvas(){
+    const wrap = $('gameWrap');
+    const maxW = wrap.clientWidth - 20;
+    const maxH = wrap.clientHeight - 20;
+    const scale = Math.min(maxW/COLS, maxH/ROWS);
+    const w = Math.max(280, Math.floor(scale*COLS));
+    const h = Math.max(180, Math.floor(scale*ROWS));
+    renderer.setSize(w, h, true);
+    camera.aspect = w/h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  // ============ HEAD PICKER ============
+  const headRow = $('headRow');
+  HEADS.forEach((h, i) => {
+    const el = document.createElement('div');
+    el.className = 'headOpt' + (i===0 ? ' selected' : '');
+    el.textContent = h === '3d-pensive' ? '🎨 3D' : h;
+    el.title = h === '3d-pensive' ? 'Pensive 3D Emoji Head' : '';
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.headOpt').forEach(s=>s.classList.remove('selected'));
+      el.classList.add('selected');
+      myHead = h;
+    });
+    headRow.appendChild(el);
+  });
+
+  // ============ COLOR PICKER (free hue slider) ============
+  const hueSlider = $('hueSlider');
+  const colorPreview = $('colorPreview');
+  function setColorFromHue(h){
+    const hex = hslToHex(h, HUE_S, HUE_L);
+    myColor = { n:'custom', hex };
+    colorPreview.style.background = hex;
+  }
+  hueSlider.addEventListener('input', () => setColorFromHue(Number(hueSlider.value)));
+  setColorFromHue(Number(hueSlider.value));
+
+  // ============ HELPERS ============
+  function randId(){ return 'p' + Math.random().toString(36).slice(2,10); }
+  function randCell(){ return { x: Math.random()*COLS, y: Math.random()*ROWS }; }
+  function wrapDelta(d, size){ if(d > size/2) d -= size; else if(d < -size/2) d += size; return d; }
+  function normalizeAngle(a){ while(a > Math.PI) a -= Math.PI*2; while(a < -Math.PI) a += Math.PI*2; return a; }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ============ FIREBASE REST LAYER ============
+  function setConn(state){
+    const dot = $('connDot'), st = $('connStatus');
+    if(state === 'ok'){ dot.classList.remove('off'); st.textContent = 'tersambung'; st.className='ok'; }
+    else if(state === 'err'){ dot.classList.add('off'); st.textContent = 'gagal konek'; st.className='err'; }
+    else { st.textContent = 'menghubungkan…'; st.className=''; }
+  }
+
+  async function fbGet(path){
+    try{
+      const r = await fetch(`${FB_BASE}/${ROOM}/${path}.json`, { cache: 'no-store' });
+      if(!r.ok) { setConn('err'); return null; }
+      setConn('ok');
+      return await r.json();
+    }catch(e){ setConn('err'); return null; }
+  }
+  async function fbPut(path, value){
+    try{
+      const r = await fetch(`${FB_BASE}/${ROOM}/${path}.json`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(value)
+      });
+      if(!r.ok){ setConn('err'); return false; }
+      setConn('ok');
+      return true;
+    }catch(e){ setConn('err'); return false; }
+  }
+  async function fbDelete(path){
+    try{
+      const r = await fetch(`${FB_BASE}/${ROOM}/${path}.json`, { method: 'DELETE' });
+      if(!r.ok){ setConn('err'); return false; }
+      setConn('ok');
+      return true;
+    }catch(e){ setConn('err'); return false; }
+  }
+
+  // ============ FIREBASE STREAMING (SSE) — near-instant sync ============
+  let rawPlayers = {};   // id -> latest player payload (all players, incl. stale)
+  let lastSeenAt = {};   // id -> LOCAL clock time we last received an update for that player
+                          // (never compares clocks across devices — avoids false "offline"
+                          // from phones whose clocks aren't perfectly in sync)
+  let rawFood = [];
+  let playersEs = null, foodEs = null;
+
+  function connectPlayerStream(){
+    if(playersEs) playersEs.close();
+    playersEs = new EventSource(`${FB_BASE}/${ROOM}/players.json`);
+    playersEs.addEventListener('put', e => applyPlayerEvent(e));
+    playersEs.addEventListener('patch', e => applyPlayerEvent(e));
+    playersEs.onopen = () => setConn('ok');
+    playersEs.onerror = () => setConn('err');
+  }
+  function applyPlayerEvent(e){
+    let d;
+    try{ d = JSON.parse(e.data); }catch(err){ return; }
+    const path = (d.path || '/').split('/').filter(Boolean);
+    const now = Date.now();
+    if(path.length === 0){
+      rawPlayers = d.data || {};
+      for(const pid in rawPlayers) lastSeenAt[pid] = now;
+    } else {
+      const pid = path[0];
+      if(d.data === null){ delete rawPlayers[pid]; delete lastSeenAt[pid]; }
+      else if(path.length === 1){ rawPlayers[pid] = d.data; lastSeenAt[pid] = now; }
+    }
+    recomputeOthers();
+  }
+
+  function connectFoodStream(){
+    if(foodEs) foodEs.close();
+    foodEs = new EventSource(`${FB_BASE}/${ROOM}/food.json`);
+    foodEs.addEventListener('put', e => applyFoodEvent(e));
+    foodEs.addEventListener('patch', e => applyFoodEvent(e));
+    foodEs.onerror = () => setConn('err');
+  }
+  function applyFoodEvent(e){
+    let d;
+    try{ d = JSON.parse(e.data); }catch(err){ return; }
+    const path = d.path || '/';
+    if(path === '/'){
+      if(Array.isArray(d.data)){
+        rawFood = d.data;
+        foodList = rawFood;
+      }
+      return;
+    }
+    // targeted single-slot update (e.g. path "/12" from another player eating
+    // that food) — patch just that index instead of waiting for a full array
+    const parts = path.split('/').filter(Boolean);
+    if(parts.length === 1){
+      const idx = parseInt(parts[0], 10);
+      if(!Number.isNaN(idx)){
+        rawFood[idx] = d.data;
+        foodList[idx] = d.data;
+      }
+    }
+  }
+
+  function recomputeOthers(){
+    const now = Date.now();
+    const fresh = {};
+    for(const pid in rawPlayers){
+      if(pid === myId) continue;
+      const p = rawPlayers[pid];
+      const seenAt = lastSeenAt[pid];
+      if(p && p.alive && seenAt && (now - seenAt) < STALE_MS){
+        fresh[pid] = p;
+        // new network payload for this player? capture an interpolation target
+        // (whatever we're currently showing -> the new data, over NET_INTERP_MS)
+        // instead of a snapshot pair, so we don't re-teleport to the network's
+        // exact tail when the previous interpolation hadn't finished yet.
+        const st = netState[pid];
+        const newSegs = p.body || [];
+        if(!st){
+          netState[pid] = { fromSegs: newSegs, toSegs: newSegs, tStart: now, tEnd: now, lastRaw: p };
+        } else if(st.lastRaw !== p){
+          const fromSegs = newSegs.length ? interpolateOtherSegs(st, now) : newSegs;
+          netState[pid] = { fromSegs, toSegs: newSegs, tStart: now, tEnd: now + NET_INTERP_MS, lastRaw: p };
+        }
+      }
+    }
+    for(const pid in netState){ if(!fresh[pid]) delete netState[pid]; }
+    others = fresh;
+    $('liveNum').textContent = Object.keys(others).length + (alive?1:0);
+    updateBoard2();
+  }
+
+  connectPlayerStream();
+  connectFoodStream();
+  setInterval(recomputeOthers, 400); // catches stale/disconnected players even with no new events
+
+  // ============ GARBAGE COLLECTOR (players yang koneksinya putus mendadak) ============
+  // pagehide cuma nutup kasus tab ditutup/navigasi normal. Kalau koneksinya
+  // ilang kasar (crash, app di-force-close, sinyal putus) tanpa sempat kirim
+  // apa-apa, entry dia bakal nyangkut permanen di Firebase. Ambang di sini
+  // sengaja jauh lebih longgar dari STALE_MS (yang cuma buat nyembunyiin dari
+  // tampilan) — GC baru bertindak kalau beneran ditinggal, bukan cuma lag sebentar.
+  const GC_MS = 20000;
+  function gcStalePlayers(){
+    const now = Date.now();
+    for(const pid in lastSeenAt){
+      if(pid === myId) continue;
+      if(now - lastSeenAt[pid] > GC_MS){
+        delete lastSeenAt[pid];
+        delete rawPlayers[pid];
+        fbDelete('players/' + pid);
+      }
+    }
+  }
+  setInterval(gcStalePlayers, 10000);
+
+  // ============ LOBBY PREVIEW ============
+  async function refreshLobbyPreview(){
+    const now = Date.now();
+    const alivePlayers = Object.keys(rawPlayers)
+      .filter(pid => rawPlayers[pid] && rawPlayers[pid].alive && lastSeenAt[pid] && (now - lastSeenAt[pid]) < STALE_MS)
+      .map(pid => rawPlayers[pid]);
+    $('liveNum').textContent = alivePlayers.length;
+    $('playerList').innerHTML = alivePlayers.slice(0,12).map(p =>
+      `<div class="pchip"><span class="sq" style="background:${p.color.hex}"></span>${escapeHtml(p.name)}</div>`
+    ).join('');
+  }
+  refreshLobbyPreview();
+  setInterval(refreshLobbyPreview, 2000);
+
+  // ============ HALL OF FAME (persistent leaderboard, shared) ============
+  const HOF_SIZE = 10;
+
+  function renderHof(list, targetId){
+    const el = $(targetId);
+    if(!list || !list.length){
+      el.innerHTML = '<div class="hofRow"><span class="sc">belum ada juara, jadilah yang pertama</span></div>';
+      return;
+    }
+    el.innerHTML = list.slice(0, HOF_SIZE).map((p, i) =>
+      `<div class="hofRow">
+         <span class="rank">#${i+1}</span>
+         <span class="sq" style="background:${p.color?.hex || '#7CFF6B'}"></span>
+         <span class="nm">${escapeHtml(p.name)}</span>
+         <span class="sc">${p.score}</span>
+       </div>`
+    ).join('');
+  }
+
+  // leaderboard disimpan sebagai MAP per-id (leaderboard/{playerId}: {...}),
+  // bukan array tunggal — supaya nulis skor 1 pemain gak perlu baca-ubah-tulis
+  // ulang seluruh papan (itu yang bikin rawan race condition/tabrakan kalau
+  // ada 2 pemain nyentuh top 10 hampir bersamaan).
+  let lastHofSnapshot = [];   // cache buat cek cepat "skor segini masuk 10 besar gak" tanpa fetch tiap saat
+  let lastLiveSubmitScore = 0;
+
+  async function refreshHof(){
+    const raw = await fbGet('leaderboard');
+    let entries; // [{id, name, color, score, ts}, ...]
+    if(Array.isArray(raw)){
+      // format lama (peninggalan sebelum diubah ke map) — tetap dibaca biar data lama gak hilang
+      entries = raw.filter(Boolean).map((v,i) => ({ id: 'legacy'+i, ...v }));
+    }else if(raw && typeof raw === 'object'){
+      entries = Object.entries(raw).filter(([,v]) => v).map(([id,v]) => ({ id, ...v }));
+    }else{
+      entries = [];
+    }
+    entries.sort((a,b) => b.score - a.score);
+
+    // beberes: kalau ada lebih dari HOF_SIZE entri (map format), hapus sisanya dari Firebase
+    // supaya papan gak numpuk terus — siapa pun client yang lagi nge-poll ini otomatis beresin.
+    if(Array.isArray(raw) === false && entries.length > HOF_SIZE){
+      for(const extra of entries.slice(HOF_SIZE)) fbDelete('leaderboard/' + extra.id);
+    }
+
+    entries = entries.slice(0, HOF_SIZE);
+    lastHofSnapshot = entries;
+    renderHof(entries, 'hofRows');
+    renderHof(entries, 'hofRowsDead');
+    return entries;
+  }
+  refreshHof();
+  setInterval(refreshHof, 4000);
+
+  function hofFloor(){
+    // skor pemain ke-10 saat ini; kalau papan belum penuh, siapa aja lolos
+    if(lastHofSnapshot.length < HOF_SIZE) return -Infinity;
+    return lastHofSnapshot[HOF_SIZE-1].score;
+  }
+
+  async function submitScore(finalScore){
+    if(!myId) return false;
+    const ok = await fbPut('leaderboard/' + myId, { name: myName, color: myColor, score: finalScore, ts: Date.now() });
+    if(ok){
+      lastLiveSubmitScore = finalScore; // baru ditandai "sudah tersimpan" kalau BENERAN berhasil
+      refreshHof();
+    }
+    return ok;
+  }
+
+  // dipanggil tiap skor nambah (checkFood) — nulis ke Firebase LANGSUNG begitu
+  // skornya lolos masuk 10 besar, bukan nunggu mati. Jadi kalau koneksi putus
+  // mendadak pas skor lagi tinggi, catatan itu udah kesimpan duluan.
+  function maybeLiveSubmit(){
+    if(!myId || !alive) return;
+    if(score <= lastLiveSubmitScore) return;
+    if(score <= hofFloor()) return;
+    submitScore(score);
+  }
+
+  // jaring pengaman: kalau submit di atas sempat gagal (mis. koneksi putus pas
+  // lagi kualifikasi top 10, atau matinya justru pas offline), coba lagi tiap
+  // beberapa detik — gak nunggu skor nambah lagi, cukup nunggu koneksi balik.
+  // myId & score tetap kepegang sampai game baru dimulai, jadi ini tetap jalan
+  // walau pemainnya udah di layar "mati".
+  setInterval(() => {
+    if(myId && score > lastLiveSubmitScore && score > hofFloor()) submitScore(score);
+  }, 5000);
+
+  // ============ REMEMBER NAME & COLOR (personal, not shared) ============
+  async function loadSavedProfile(){
+    let hasSaved = false;
+    try{
+      const nameRes = await window.storage.get('profile-name', false);
+      if(nameRes && nameRes.value){
+        $('nameInput').value = nameRes.value;
+        hasSaved = true;
+      }
+      const colorRes = await window.storage.get('profile-color', false);
+      if(colorRes && colorRes.value){
+        const hue = Number(colorRes.value);
+        if(!isNaN(hue) && hue >= 0 && hue <= 359){
+          hueSlider.value = hue;
+          setColorFromHue(hue);
+        }
+      }
+      const headRes = await window.storage.get('profile-head', false);
+      if(headRes && headRes.value){
+        const hidx = HEADS.indexOf(headRes.value);
+        if(hidx >= 0){
+          myHead = headRes.value;
+          document.querySelectorAll('.headOpt').forEach((s,i) => {
+            s.classList.toggle('selected', i === hidx);
+          });
+        }
+      }
+    }catch(e){ /* first time, no saved profile yet */ }
+    return hasSaved;
+  }
+
+  async function saveProfile(){
+    try{
+      await window.storage.set('profile-name', myName, false);
+      await window.storage.set('profile-color', String(hueSlider.value), false);
+      await window.storage.set('profile-head', myHead, false);
+    }catch(e){ /* ignore, non-critical */ }
+  }
+
+  // auto-join on load if a name is already saved — skips the join screen entirely
+  (async function autoJoinIfKnown(){
+    const hasSaved = await loadSavedProfile();
+    if(hasSaved){
+      startGame();
+    }
+  })();
+
+  $('changeNameBtn').addEventListener('click', () => {
+    // simpan profil, lalu keluar lewat alur "mati" yang sama supaya
+    // skor ikut tersimpan ke papan skor — cuma beda alasannya
+    saveProfile();
+    if(alive && myId) die('keluar');
+  });
+
+  // ============ JOIN ============
+  $('playBtn').addEventListener('click', startGame);
+  $('nameInput').addEventListener('keydown', e => { if(e.key === 'Enter') startGame(); });
+
+  async function startGame(){
+    let nm = $('nameInput').value.trim();
+    if(!nm) nm = 'Ular' + Math.floor(Math.random()*900+100);
+    myName = nm.slice(0,12);
+    myId = randId();
+    saveProfile();
+
+    resetSnake();
+
+    await ensureFood();
+
+    $('screen-join').classList.add('hidden');
+    $('screen-dead').classList.add('hidden');
+    $('screen-game').classList.remove('hidden');
+    $('changeNameBtn').classList.add('visible');
+    $('myNameTag').textContent = myName;
+    resizeCanvas();
+
+    alive = true;
+    angle = 0;
+    headLight.color.set(myColor.hex);
+
+    recomputeOthers();
+    publishSelf();
+  }
+
+  function resetSnake(){
+    const start = { x: 3 + Math.random()*(COLS-6), y: 3 + Math.random()*(ROWS-6) };
+    head = { x: start.x, y: start.y };
+    angle = 0;
+    trail = []; distSinceTrail = 0; mySegsCache = [];
+    score = 3;
+    lastLiveSubmitScore = 0;
+    braking = false;
+    myChatMsg = ''; myChatTs = 0;
+    brakeBtn.classList.remove('active');
+    brakeBtn.textContent = 'REM';
+    chatPrompt.classList.add('hidden');
+    chatBox.classList.add('hidden');
+  }
+
+  // walk backward from the head through the recorded trail, dropping a body
+  // segment every SEG_SPACING units of distance. count includes the head itself.
+  function computeSnakeBody(count){
+    const pts = [head];
+    for(let i = trail.length-1; i>=0; i--) pts.push(trail[i]);
+    const segs = [];
+    let distAcc = 0, want = SEG_SPACING;
+    for(let i=1; i<pts.length && segs.length < count-1; i++){
+      const a = pts[i-1], b = pts[i];
+      const dx = b.x-a.x, dy = b.y-a.y;
+      if(Math.abs(dx) > COLS/2 || Math.abs(dy) > ROWS/2) continue; // wrap jump, skip
+      const segLen = Math.hypot(dx,dy);
+      if(segLen === 0) continue;
+      while(distAcc + segLen >= want && segs.length < count-1){
+        const t = (want-distAcc)/segLen;
+        segs.push({ x: a.x+dx*t, y: a.y+dy*t });
+        want += SEG_SPACING;
+      }
+      distAcc += segLen;
+    }
+    return [head, ...segs];
+  }
+
+  // ============ FOOD ============
+  async function ensureFood(){
+    let list = await fbGet('food');
+    if(!Array.isArray(list)) list = [];
+    if(list.length < FOOD_COUNT){
+      while(list.length < FOOD_COUNT) list.push(randCell());
+      await fbPut('food', list);
+    }
+    foodList = list;
+  }
+
+  // ============ NETWORK PUBLISH ============
+  async function publishSelf(){
+    if(!myId) return;
+    const segs = computeSnakeBody(Math.min(score, MAX_NET_SEGMENTS));
+    const payload = {
+      name: myName, color: myColor, head: myHead, body: segs,
+      score, alive, lastUpdate: Date.now(),
+      chatMsg: myChatMsg, chatTs: myChatTs
+    };
+    await fbPut('players/' + myId, payload);
+  }
+
+  function updateBoard2(){
+    const rows = Object.values(others).concat(alive ? [{name:myName, color:myColor, score}] : []);
+    rows.sort((a,b)=>b.score-a.score);
+    $('boardRows').innerHTML = rows.slice(0,6).map(p =>
+      `<div class="row"><span class="nm" style="color:${p.color.hex}">${escapeHtml(p.name)}</span><span class="sc">${p.score}</span></div>`
+    ).join('') || '<div class="row"><span class="sc">belum ada data</span></div>';
+  }
+
+  // ============ INPUT — analog rudder steering (works with the 3D chase camera) ============
+  let steerInput = 0; // -1 (turn left) .. 1 (turn right), 0 = go straight
+
+  // desktop: cursor position left/right of canvas center steers the snake, like a wheel
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    steerInput = Math.max(-1, Math.min(1, nx));
+  });
+  canvas.addEventListener('mouseleave', () => { steerInput = 0; });
+
+  // mobile: block touches on the arena itself — otherwise a tap fires a
+  // synthetic mousemove (touch-to-mouse emulation) that sets steerInput
+  // once and never resets, effectively "locking" the steering direction
+  canvas.addEventListener('touchstart', e => e.preventDefault(), {passive:false});
+  canvas.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
+
+  // keyboard fallback
+  const keysHeld = { left:false, right:false };
+  function applyKeySteer(){
+    if(keysHeld.left && !keysHeld.right) steerInput = -1;
+    else if(keysHeld.right && !keysHeld.left) steerInput = 1;
+    else if(!keysHeld.left && !keysHeld.right) steerInput = 0;
+  }
+  window.addEventListener('keydown', e => {
+    if(document.activeElement === chatInput) return;
+    if(e.code === 'Space'){ e.preventDefault(); if(alive) setBraking(!braking); return; }
+    const k = e.key.toLowerCase();
+    if(k==='arrowleft'||k==='a') keysHeld.left = true;
+    if(k==='arrowright'||k==='d') keysHeld.right = true;
+    applyKeySteer();
+  });
+  window.addEventListener('keyup', e => {
+    if(document.activeElement === chatInput) return;
+    const k = e.key.toLowerCase();
+    if(k==='arrowleft'||k==='a') keysHeld.left = false;
+    if(k==='arrowright'||k==='d') keysHeld.right = false;
+    applyKeySteer();
+  });
+
+  // mobile: virtual analog joystick — how far left/right you tilt it sets the turn amount
+  const joyBase = $('joystick'), joyKnob = $('joyKnob');
+  const JOY_RADIUS = 40, JOY_DEADZONE = 6;
+  let joyActive = false, joyCenter = {x:0,y:0}, joyTouchId = null;
+
+  function joyUpdateFromPoint(clientX, clientY){
+    const dx = clientX - joyCenter.x, dy = clientY - joyCenter.y;
+    const cx = Math.max(-JOY_RADIUS, Math.min(JOY_RADIUS, dx));
+    const cy = Math.max(-JOY_RADIUS, Math.min(JOY_RADIUS, dy));
+    joyKnob.style.transform = `translate(${cx}px, ${cy}px)`;
+    steerInput = Math.abs(dx) > JOY_DEADZONE ? Math.max(-1, Math.min(1, dx/JOY_RADIUS)) : 0;
+  }
+  function findTouchById(touchList, id){
+    for(let i=0;i<touchList.length;i++){
+      if(touchList[i].identifier === id) return touchList[i];
+    }
+    return null;
+  }
+  function joyStart(e){
+    const rect = joyBase.getBoundingClientRect();
+    joyCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+    if(e.changedTouches){
+      // only latch onto the *specific* finger that landed on the joystick —
+      // other fingers touching other buttons (e.g. brake) must not affect it
+      const t = e.changedTouches[0];
+      joyTouchId = t.identifier;
+      joyActive = true;
+      joyUpdateFromPoint(t.clientX, t.clientY);
+    } else {
+      joyActive = true;
+      joyUpdateFromPoint(e.clientX, e.clientY);
+    }
+  }
+  function joyUpdate(e){
+    if(!joyActive) return;
+    if(e.touches){
+      const t = findTouchById(e.touches, joyTouchId);
+      if(!t) return; // our finger isn't in this event, ignore
+      joyUpdateFromPoint(t.clientX, t.clientY);
+    } else {
+      joyUpdateFromPoint(e.clientX, e.clientY);
+    }
+  }
+  function joyEnd(){ joyActive = false; joyTouchId = null; joyKnob.style.transform = 'translate(0,0)'; steerInput = 0; }
+  function joyEndTouch(e){
+    if(e.changedTouches){
+      // only end the joystick if the finger that lifted is the one that started it —
+      // lifting a different finger (e.g. off the brake button) must not stop steering
+      if(!findTouchById(e.changedTouches, joyTouchId)) return;
+    }
+    joyEnd();
+  }
+
+  joyBase.addEventListener('touchstart', e => { e.preventDefault(); joyStart(e); }, {passive:false});
+  joyBase.addEventListener('touchmove', e => { e.preventDefault(); joyUpdate(e); }, {passive:false});
+  joyBase.addEventListener('touchend', e => { e.preventDefault(); joyEndTouch(e); }, {passive:false});
+  joyBase.addEventListener('touchcancel', e => { e.preventDefault(); joyEndTouch(e); }, {passive:false});
+  joyBase.addEventListener('mousedown', e => { joyStart(e); });
+  window.addEventListener('mousemove', e => { if(joyActive) joyUpdate(e); });
+  window.addEventListener('mouseup', () => { if(joyActive) joyEnd(); });
+
+  // ============ BRAKE + CHAT ============
+  const brakeBtn = $('brakeBtn');
+  const chatPrompt = $('chatPrompt');
+  const chatBox = $('chatBox');
+  const chatInput = $('chatInput');
+  const chatSendBtn = $('chatSendBtn');
+
+  function setBraking(v){
+    braking = v;
+    brakeBtn.classList.toggle('active', braking);
+    brakeBtn.textContent = braking ? 'JALAN' : 'REM';
+    chatPrompt.classList.toggle('hidden', !braking);
+    chatBox.classList.add('hidden');
+    chatInput.blur();
+  }
+
+  // handles its own touch immediately (no 300ms click delay, no interference
+  // from other fingers held elsewhere e.g. on the joystick) while still
+  // working with a plain mouse click on desktop
+  function addTapHandler(el, fn){
+    let touched = false;
+    el.addEventListener('touchstart', e => {
+      e.preventDefault();
+      touched = true;
+      fn();
+    }, {passive:false});
+    el.addEventListener('click', () => {
+      if(touched){ touched = false; return; }
+      fn();
+    });
+  }
+
+  addTapHandler(brakeBtn, () => { if(alive) setBraking(!braking); });
+
+  addTapHandler(chatPrompt, () => {
+    chatPrompt.classList.add('hidden');
+    chatBox.classList.remove('hidden');
+    chatInput.focus();
+  });
+
+  function sendChat(){
+    const text = chatInput.value.trim();
+    if(text){
+      myChatMsg = text.slice(0, 40);
+      myChatTs = Date.now();
+      publishSelf();
+    }
+    chatInput.value = '';
+    chatInput.blur();
+    chatBox.classList.add('hidden');
+    if(braking) chatPrompt.classList.remove('hidden');
+  }
+  addTapHandler(chatSendBtn, sendChat);
+  chatInput.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if(e.key === 'Enter') sendChat();
+  });
+
+  // ============ GAME LOOP — continuous analog movement ============
+  function simulate(dt){
+    angle = normalizeAngle(angle + steerInput*TURN_RATE*dt);
+
+    const dist = braking ? 0 : SPEED * dt;
+    let nx = head.x + Math.cos(angle)*dist;
+    let ny = head.y + Math.sin(angle)*dist;
+    if(nx < 0) nx += COLS; else if(nx >= COLS) nx -= COLS;
+    if(ny < 0) ny += ROWS; else if(ny >= ROWS) ny -= ROWS;
+
+    distSinceTrail += dist;
+    if(distSinceTrail >= MIN_TRAIL_STEP){
+      trail.push({ x: head.x, y: head.y });
+      distSinceTrail = 0;
+      // evict one oldest point at a time, not in a big batch — a bulk trim
+      // instantly deletes the point the tail tip was using, which snaps the
+      // visible tail forward. One-at-a-time keeps it perfectly smooth.
+      if(trail.length > TRAIL_MAX) trail.shift();
+    }
+
+    head = { x: nx, y: ny };
+    mySegsCache = computeSnakeBody(score);
+
+    checkFood();
+    if(alive) checkCollisions();
+  }
+
+  function checkFood(){
+    for(let i=0;i<foodList.length;i++){
+      const f = foodList[i];
+      if(!f) continue;
+      const dx = wrapDelta(head.x-f.x, COLS), dy = wrapDelta(head.y-f.y, ROWS);
+      if(Math.hypot(dx,dy) < FOOD_R){
+        score++;
+        foodList[i] = randCell();
+        // write only this one slot — writing the whole array here races with
+        // other players eating other food at the same time: whoever's stale
+        // full-array write lands last silently reverts everyone else's catch,
+        // making eaten food look like it "respawns" right back where it was.
+        fbPut(`food/${i}`, foodList[i]);
+        $('scoreNum').textContent = score;
+        maybeLiveSubmit();
+        break;
+      }
+    }
+  }
+
+  function checkCollisions(){
+    for(let i=SELF_SKIP;i<mySegsCache.length;i++){
+      const s = mySegsCache[i];
+      const dx = wrapDelta(head.x-s.x, COLS), dy = wrapDelta(head.y-s.y, ROWS);
+      if(Math.hypot(dx,dy) < (HEAD_R+BODY_R)*0.85){ die('kejegal badan sendiri'); return; }
+    }
+    for(const pid in others){
+      const p = others[pid];
+      if(!p.body) continue;
+      for(const s of p.body){
+        const dx = wrapDelta(head.x-s.x, COLS), dy = wrapDelta(head.y-s.y, ROWS);
+        if(Math.hypot(dx,dy) < (HEAD_R+BODY_R)*0.85){ die('ditabrak ular ' + p.name); return; }
+      }
+    }
+  }
+
+  let lastFrameT = null;
+  function frame(ts){
+    if(lastFrameT === null) lastFrameT = ts;
+    const dt = Math.min((ts - lastFrameT)/1000, 0.05);
+    lastFrameT = ts;
+    if(alive){ simulate(dt); render3D(); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  setInterval(() => { if(alive) publishSelf(); }, 130);
+
+  function die(reason){
+    alive = false;
+    braking = false;
+    chatPrompt.classList.add('hidden');
+    chatBox.classList.add('hidden');
+    brakeBtn.classList.remove('active');
+    brakeBtn.textContent = 'REM';
+    deathReason = reason;
+    fbDelete('players/' + myId);
+    $('deadReason').textContent = reason;
+    $('finalScore').textContent = score;
+    $('screen-game').classList.add('hidden');
+    $('screen-dead').classList.remove('hidden');
+    $('changeNameBtn').classList.remove('visible');
+    submitScore(score);
+  }
+
+  $('respawnBtn').addEventListener('click', () => {
+    $('screen-dead').classList.add('hidden');
+    $('screen-join').classList.remove('hidden');
+  });
+
+  // ============ CLEANUP ON TAB CLOSE ============
+  // best-effort: fires when tab is closed/navigated away normally.
+  // Marks the snake dead instantly instead of waiting for the 8s stale timeout.
+  // Won't fire on a hard crash or lost network — the stale timeout still covers that case.
+  window.addEventListener('pagehide', () => {
+    if(alive && myId){
+      try{
+        fetch(`${FB_BASE}/${ROOM}/players/${myId}.json`, {
+          method: 'DELETE',
+          keepalive: true
+        });
+      }catch(e){ /* best effort only */ }
+    }
+  });
+
+  // ============ RENDER (3D) ============
+  function render3D(){
+    const activeIds = new Set();
+    if(alive){
+      updateSnakeMeshes('self', mySegsCache, myColor.hex, myHead, myName, myChatMsg, myChatTs, braking ? null : angle);
+      activeIds.add('self');
+    }
+    const now = Date.now();
+    for(const pid in others){
+      const p = others[pid];
+      const st = netState[pid];
+      if(!st) continue;
+      const segsNow = interpolateOtherSegs(st, now);
+      if(segsNow.length){
+        updateSnakeMeshes(pid, segsNow, p.color.hex, p.head || HEADS[0], p.name, p.chatMsg || '', p.chatTs || 0, null);
+        activeIds.add(pid);
+      }
+    }
+    removeStalePlayers(activeIds);
+    updateFoodMeshes();
+    updateCamera();
+    renderer.render(scene, camera);
+  }
+
+})();
+</script>
+</body>
+</html>
