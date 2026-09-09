@@ -592,7 +592,8 @@
   const GEAR_SPEEDS = [2.16, 4.32, 8.64]; // gigi 1 = dasar, gigi 2 = nilai gigi3 lama, gigi 3 = 2x lipat gigi 2
   let speedGear = 0;
   let SPEED = GEAR_SPEEDS[speedGear]; // cell units per second
-  const TURN_RATE = 5.1;     // radians per second at full steering input
+  const TURN_RATE = 3.2;     // radians per second at full steering input
+  const STEER_SMOOTH_RATE = 7; // per second — how fast actual steering catches up to input; lower = lebih "berat"/gak goyang
   const SEG_SPACING = 0.62;  // distance between body segments
   const HEAD_R = 0.46, BODY_R = 0.44, FOOD_R = 0.52;
   const MIN_TRAIL_STEP = 0.12;
@@ -1962,7 +1963,8 @@
   }
 
   // ============ INPUT — analog rudder steering (works with the 3D chase camera) ============
-  let steerInput = 0; // -1 (turn left) .. 1 (turn right), 0 = go straight
+  let steerInput = 0; // -1 (turn left) .. 1 (turn right), 0 = go straight — raw input dari mouse/keyboard/joystick
+  let steerSmooth = 0; // nilai yang benar-benar dipakai buat belok, ngejar steerInput pelan-pelan biar gerakan kecil di input gak bikin badan ular nyentak/goyang
 
   // desktop: cursor position left/right of canvas center steers the snake, like a wheel
   canvas.addEventListener('mousemove', e => {
@@ -2159,7 +2161,9 @@
 
   // ============ GAME LOOP — continuous analog movement ============
   function simulate(dt){
-    angle = normalizeAngle(angle + steerInput*TURN_RATE*dt);
+    const steerAlpha = 1 - Math.exp(-STEER_SMOOTH_RATE*dt); // frame-rate independent exponential smoothing
+    steerSmooth += (steerInput - steerSmooth) * steerAlpha;
+    angle = normalizeAngle(angle + steerSmooth*TURN_RATE*dt);
 
     const dist = braking ? 0 : SPEED * dt;
     let nx = head.x + Math.cos(angle)*dist;
