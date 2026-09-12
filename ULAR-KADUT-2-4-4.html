@@ -452,6 +452,18 @@
     /* arena dirapatkan ke atas biar tidak ada jarak kosong di atasnya */
     #gameWrap{ align-items:flex-start; }
   }
+
+.rock-casualty-board{
+position:absolute;left:50%;top:0;transform:translate(-50%,-105%);
+width:150px;min-height:48px;padding:7px 10px;box-sizing:border-box;
+background:linear-gradient(180deg,#a96f35,#75451f);border:3px solid #4a2a16;
+border-radius:4px;box-shadow:0 5px 0 #3b2112,0 8px 14px rgba(0,0,0,.38);
+color:#fff2cf;text-align:center;font-family:Arial,sans-serif;font-weight:800;
+text-shadow:1px 2px 2px #321b0d;pointer-events:none;white-space:nowrap
+}
+.rock-casualty-board .board-title{display:block;font-size:10px;letter-spacing:.7px}
+.rock-casualty-board .board-count{display:block;margin-top:2px;font-size:18px;color:#fff}
+
 </style>
 </head>
 <body>
@@ -592,8 +604,8 @@
   const GEAR_SPEEDS = [2.16, 4.32, 8.64]; // gigi 1 = dasar, gigi 2 = nilai gigi3 lama, gigi 3 = 2x lipat gigi 2
   let speedGear = 0;
   let SPEED = GEAR_SPEEDS[speedGear]; // cell units per second
-  const TURN_RATE = 3.2;     // radians per second at full steering input
-  const STEER_SMOOTH_RATE = 7; // per second — how fast actual steering catches up to input; lower = lebih "berat"/gak goyang
+  const TURN_RATE = 2.1;     // radians per second at full steering input
+  const STEER_SMOOTH_RATE = 5; // per second — how fast actual steering catches up to input; lower = lebih "berat"/gak goyang
   const SEG_SPACING = 0.62;  // distance between body segments
   const HEAD_R = 0.46, BODY_R = 0.44, FOOD_R = 0.52;
   const MIN_TRAIL_STEP = 0.12;
@@ -607,7 +619,8 @@
   // semua orang yang lagi nonton lewat Firebase SSE, terutama pas ada beberapa snake sekaligus
   const SELF_SKIP = 7;
   const CHAT_DURATION_MS = 6000;
-  const CAM_DIST = 4.2, CAM_HEIGHT = 3.0, CAM_LOOK_AHEAD = 1.0;
+  const CAM_DIST = 4.2, CAM_HEIGHT = 3.0, CAM_LOOK_AHEAD = 4.2;
+  let camLookAhead = CAM_LOOK_AHEAD;
   const BASE_FOV = 62, BASE_ASPECT = 1.5; // FOV was tuned for a ~3:2 (landscape-ish) view
   let camExtraTilt = 0; // extra downward pitch added on portrait screens (see resizeCanvas)
   let camDistExtra = 0; // extra distance the camera sits back on portrait screens (see resizeCanvas)
@@ -634,6 +647,158 @@
 
   const headLight = new THREE.PointLight(0x6fd8ff, 1.1, 8, 2);
   scene.add(headLight);
+
+  // lima batu rintangan tersebar di arena
+  const ROCK_R = 1.35;
+  const ROCK_POS = [
+    {x: COLS/2, y: ROWS/2},
+    {x: COLS*0.25, y: ROWS*0.27},
+    {x: COLS*0.75, y: ROWS*0.30},
+    {x: COLS*0.28, y: ROWS*0.74},
+    {x: COLS*0.72, y: ROWS*0.72}
+  ];
+  const rockGeo = new THREE.DodecahedronGeometry(ROCK_R, 0);
+  const rockMat = new THREE.MeshStandardMaterial({
+    color: 0x6f747c,
+    roughness: 0.95,
+    metalness: 0.02
+  });
+  ROCK_POS.forEach((p,i)=>{
+    const w = cellToWorld(p.x,p.y);
+    const rock = new THREE.Mesh(rockGeo, rockMat);
+    rock.position.set(w.x, ROCK_R * 0.78, w.z);
+    rock.scale.set(1.15 + (i%2)*0.08, 0.82, 1.0 + (i%3)*0.06);
+    rock.rotation.set(0.18 + i*0.09, 0.55 + i*0.7, -0.12 + i*0.05);
+    scene.add(rock);
+  });
+  const rockCasualties = ROCK_POS.map(()=>0);
+  const rockLastVictims = ROCK_POS.map(()=>'-');
+  let rockStatsSynced = false;
+  let rockStatsEs = null;
+  const rockBoards = [];
+  ROCK_POS.forEach((p,i)=>{
+    const w = cellToWorld(p.x,p.y);
+    const group = new THREE.Group();
+    group.position.set(w.x, ROCK_R * 2.05, w.z);
+    group.rotation.y = [0, Math.PI * 0.55, Math.PI, -Math.PI * 0.55, Math.PI * 0.25][i];
+
+    const post = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12,1.25,0.12),
+      new THREE.MeshStandardMaterial({color:0x563019,roughness:1})
+    );
+    post.position.y = -0.62;
+    group.add(post);
+
+    const board = new THREE.Mesh(
+      new THREE.BoxGeometry(2.65,0.88,0.12),
+      new THREE.MeshStandardMaterial({color:0x8a5629,roughness:0.9})
+    );
+    board.position.y = 0.08;
+    group.add(board);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 170;
+    const ctx = canvas.getContext('2d');
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 4;
+
+    const textMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.5,0.83),
+      new THREE.MeshBasicMaterial({map:tex})
+    );
+    textMesh.position.set(0,0.08,0.075);
+    group.add(textMesh);
+    scene.add(group);
+    rockBoards.push({ctx,tex});
+  });
+
+  function updateRockBoards(){
+    rockBoards.forEach(({ctx,tex},i)=>{
+      ctx.clearRect(0,0,512,170);
+      ctx.fillStyle='#8a5629';
+      ctx.fillRect(0,0,512,170);
+      ctx.strokeStyle='#4a2a16';
+      ctx.lineWidth=12;
+      ctx.strokeRect(6,6,500,158);
+      ctx.fillStyle='#fff0c8';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.font='bold 34px Arial';
+      ctx.fillText('TOTAL KORBAN☠️',256,54);
+      ctx.font='bold 58px Arial';
+      ctx.fillText(String(rockCasualties[i]),256,119);
+      const victim = rockLastVictims[i] === '-' ? 'BELUM ADA' : rockLastVictims[i];
+      const victimName = victim.length > 12 ? victim.slice(0,12) : victim;
+      const labelText = 'KORBAN TERAKHIR: ';
+      ctx.font='bold 19px Arial';
+      const labelW = ctx.measureText(labelText).width;
+      ctx.font='bold 34px Arial';
+      const nameW = ctx.measureText(victimName).width;
+      const totalW = labelW + nameW;
+      const startX = 256 - totalW / 2;
+      ctx.textAlign='left';
+      ctx.textBaseline='middle';
+      ctx.fillStyle='#ffe7a3';
+      ctx.font='bold 19px Arial';
+      ctx.fillText(labelText,startX,150);
+      ctx.fillStyle='#fff7d6';
+      ctx.font='bold 34px Arial';
+      ctx.fillText(victimName,startX + labelW,150);
+      tex.needsUpdate=true;
+    });
+  }
+  updateRockBoards();
+
+  function applyRockStats(data){
+    for(let i=0;i<ROCK_POS.length;i++){
+      const entries = data && data[i] && typeof data[i] === 'object' ? data[i] : {};
+      let count = 0, lastTs = -1, lastName = '-';
+      for(const key in entries){
+        const v = entries[key];
+        if(!v) continue;
+        count++;
+        const ts = Number(v.ts) || 0;
+        if(ts >= lastTs){
+          lastTs = ts;
+          lastName = v.name || 'Pemain';
+        }
+      }
+      rockCasualties[i] = count;
+      rockLastVictims[i] = lastName;
+    }
+    rockStatsSynced = true;
+    updateRockBoards();
+  }
+
+  function connectRockStatsStream(){
+    if(rockStatsEs) rockStatsEs.close();
+    rockStatsEs = new EventSource(`${FB_BASE}/${ROOM}/rockCasualties.json`);
+    rockStatsEs.addEventListener('put', e => {
+      try{
+        const d = JSON.parse(e.data);
+        const path = d.path || '/';
+        if(path === '/') applyRockStats(d.data || {});
+        else {
+          const parts = path.split('/').filter(Boolean);
+          if(parts.length >= 1){
+            fbGet('rockCasualties').then(data => applyRockStats(data || {}));
+          }
+        }
+      }catch(err){}
+    });
+    rockStatsEs.addEventListener('patch', e => {
+      try{
+        const d = JSON.parse(e.data);
+        fbGet('rockCasualties').then(data => applyRockStats(data || {}));
+      }catch(err){}
+    });
+  }
+  connectRockStatsStream();
+
+  const rockLight = new THREE.PointLight(0x9aa6c2, 0.18, 5, 2);
+  rockLight.position.set(0, 2.2, 0);
+  scene.add(rockLight);
 
   function makeGridTexture(){
     const c = document.createElement('canvas');
@@ -719,8 +884,8 @@
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     return mesh;
   }
-  function updateBodyMesh(bodyMesh, segs){
-    const bodyCount = Math.min(Math.max(segs.length - 1, 0), BODY_INSTANCE_CAP);
+  function updateBodyMesh(bodyMesh, segs, maxVisible=BODY_INSTANCE_CAP){
+    const bodyCount = Math.min(Math.max(segs.length - 1, 0), BODY_INSTANCE_CAP, maxVisible);
     for(let i=0; i<bodyCount; i++){
       const s = segs[i+1];
       const w = cellToWorld(s.x, s.y);
@@ -1089,7 +1254,7 @@
     // pool dibuat) — skip itung ulang buffer-nya tiap frame biar gak
     // buang-buang kerja CPU percuma buat sesuatu yang gak dirender.
 
-    updateBodyMesh(pool.bodyMesh, segs);
+    updateBodyMesh(pool.bodyMesh, segs, BODY_INSTANCE_CAP);
 
     if(segs.length > 0){
       const s = segs[0];
@@ -1191,7 +1356,7 @@
     // efek delay-nya kerasa, tapi masih cukup cepat biar kamera gak
     // ketinggalan jauh pas belokan panjang/terus-menerus.
     let da = normalizeAngle(angle - camAngle);
-    const camAngleAlpha = 1 - Math.pow(1 - 0.03, d * 60);
+    const camAngleAlpha = 1 - Math.pow(1 - 0.08, d * 60);
     camAngle = normalizeAngle(camAngle + da*camAngleAlpha);
     const fx = Math.cos(camAngle), fz = Math.sin(camAngle);
     const dist = CAM_DIST + camDistExtra;
@@ -1199,9 +1364,9 @@
     // lerp factor dihitung dari dt (bukan angka tetap) — biar gerakan kamera
     // tetap mulus walau frame time naik-turun (mis. gara-gara render lebih
     // berat di portrait/FOV lebar). 0.14 tetap jadi acuan di ~60fps.
-    const camLerpAlpha = 1 - Math.pow(1 - 0.14, d * 60);
+    const camLerpAlpha = 1 - Math.pow(1 - 0.24, d * 60);
     camera.position.lerp(desired, camLerpAlpha);
-    camera.lookAt(w.x + fx*CAM_LOOK_AHEAD, 0.6, w.z + fz*CAM_LOOK_AHEAD);
+    camera.lookAt(w.x + fx*camLookAhead, 0.6, w.z + fz*camLookAhead);
     if (camExtraTilt) camera.rotateX(-camExtraTilt); // tilt further down on tall/portrait screens so the extra fov reveals more floor, not empty sky
     headLight.position.set(w.x, 1.2, w.z);
   }
@@ -1211,6 +1376,7 @@
     const w = Math.max(280, Math.floor(wrap.clientWidth - 20));
     const h = Math.max(180, Math.floor(wrap.clientHeight - 20));
     const aspect = w/h;
+    camLookAhead = aspect < BASE_ASPECT ? 4.8 : CAM_LOOK_AHEAD;
     // portrait (aspect < BASE_ASPECT) udah lebih berat karena FOV melebar (lihat
     // di bawah) — kompensasi dengan render resolution lebih rendah biar GPU HP
     // gak keteteran, terutama pas kamera muter (belok) di mana draw call spike.
@@ -1332,6 +1498,18 @@
       setConn('ok');
       return await r.json();
     }catch(e){ setConn('err'); return null; }
+  }
+  async function fbPost(path, value){
+    try{
+      const r = await fetch(`${FB_BASE}/${ROOM}/${path}.json`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(value)
+      });
+      if(!r.ok){ setConn('err'); return false; }
+      setConn('ok');
+      return true;
+    }catch(e){ setConn('err'); return false; }
   }
   async function fbPut(path, value){
     try{
@@ -1865,7 +2043,10 @@
   }
 
   function resetSnake(){
-    const start = { x: 3 + Math.random()*(COLS-6), y: 3 + Math.random()*(ROWS-6) };
+    let start;
+    do {
+      start = { x: 3 + Math.random()*(COLS-6), y: 3 + Math.random()*(ROWS-6) };
+    } while(ROCK_POS.some(rock => Math.hypot(wrapDelta(start.x-rock.x, COLS), wrapDelta(start.y-rock.y, ROWS)) < 4.5));
     head = { x: start.x, y: start.y };
     angle = 0;
     trail = []; distSinceTrail = 0; mySegsCache = [];
@@ -2210,6 +2391,21 @@
   }
 
   function checkCollisions(){
+    for(let rockIndex=0; rockIndex<ROCK_POS.length; rockIndex++){
+      const rock = ROCK_POS[rockIndex];
+      const rockDx = wrapDelta(head.x - rock.x, COLS);
+      const rockDz = wrapDelta(head.y - rock.y, ROWS);
+      if(Math.hypot(rockDx, rockDz) < ROCK_R * 0.95){
+        const victimName = (typeof myName !== 'undefined' && myName) ? myName : 'Pemain';
+        const victimEvent = { name: victimName, ts: Date.now(), id: (myId || Math.random().toString(36).slice(2)) };
+        fbPost(`rockCasualties/${rockIndex}`, victimEvent);
+        rockCasualties[rockIndex]++;
+        rockLastVictims[rockIndex] = victimName;
+        updateRockBoards();
+        die('menabrak batu');
+        return;
+      }
+    }
     for(let i=SELF_SKIP;i<mySegsCache.length;i++){
       const s = mySegsCache[i];
       const dx = wrapDelta(head.x-s.x, COLS), dy = wrapDelta(head.y-s.y, ROWS);
