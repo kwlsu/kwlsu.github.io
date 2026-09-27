@@ -1148,20 +1148,107 @@ async function getVisitorInfo(){
         }
     }catch(_){}
 
+    /*
+     * IP + geolocation dari IP-API.
+     * Data lokasi IP bersifat PERKIRAAN, bukan GPS.
+     *
+     * Untuk file lokal (file://), endpoint HTTP dapat dipakai.
+     * Jika halaman dijalankan di HTTPS, browser dapat memblokir
+     * endpoint HTTP karena mixed content.
+     */
     try{
+        const fields =
+            [
+                "status",
+                "message",
+                "query",
+                "country",
+                "countryCode",
+                "regionName",
+                "city",
+                "lat",
+                "lon",
+                "timezone",
+                "isp",
+                "org",
+                "as",
+                "mobile",
+                "proxy",
+                "hosting"
+            ].join(",");
+
+        const apiUrl =
+            "http://ip-api.com/json/?fields=" +
+            encodeURIComponent(fields);
+
         const res =
-            await fetch(
-                "https://api.ipify.org?format=json"
-            );
+            await fetch(apiUrl, {
+                cache:"no-store"
+            });
 
         if(res.ok){
             const ipData =
                 await res.json();
 
-            info.ip =
-                ipData.ip || "";
+            if(ipData.status === "success"){
+                info.ip =
+                    ipData.query || "";
+
+                info.ipCountry =
+                    ipData.country || "";
+
+                info.ipCountryCode =
+                    ipData.countryCode || "";
+
+                info.ipRegion =
+                    ipData.regionName || "";
+
+                info.ipCity =
+                    ipData.city || "";
+
+                info.ipLat =
+                    typeof ipData.lat === "number"
+                        ? ipData.lat
+                        : "";
+
+                info.ipLon =
+                    typeof ipData.lon === "number"
+                        ? ipData.lon
+                        : "";
+
+                info.ipTimezone =
+                    ipData.timezone || "";
+
+                info.ipIsp =
+                    ipData.isp || "";
+
+                info.ipOrg =
+                    ipData.org || "";
+
+                info.ipAs =
+                    ipData.as || "";
+
+                info.ipMobile =
+                    !!ipData.mobile;
+
+                info.ipProxy =
+                    !!ipData.proxy;
+
+                info.ipHosting =
+                    !!ipData.hosting;
+            }else{
+                console.log(
+                    "IP-API gagal:",
+                    ipData.message || "unknown error"
+                );
+                info.ip = "";
+            }
         }
     }catch(err){
+        console.log(
+            "Gagal mengambil IP/GeoIP dari IP-API:",
+            err
+        );
         info.ip = "";
     }
 
@@ -1192,6 +1279,34 @@ async function catatKlik(menuKey){
                 visitorInfo.screen;
             payload.timezone =
                 visitorInfo.timezone;
+
+            // GeoIP dari IP-API — lokasi bersifat perkiraan.
+            payload.ipCountry =
+                visitorInfo.ipCountry;
+            payload.ipCountryCode =
+                visitorInfo.ipCountryCode;
+            payload.ipRegion =
+                visitorInfo.ipRegion;
+            payload.ipCity =
+                visitorInfo.ipCity;
+            payload.ipLat =
+                visitorInfo.ipLat;
+            payload.ipLon =
+                visitorInfo.ipLon;
+            payload.ipTimezone =
+                visitorInfo.ipTimezone;
+            payload.ipIsp =
+                visitorInfo.ipIsp;
+            payload.ipOrg =
+                visitorInfo.ipOrg;
+            payload.ipAs =
+                visitorInfo.ipAs;
+            payload.ipMobile =
+                visitorInfo.ipMobile;
+            payload.ipProxy =
+                visitorInfo.ipProxy;
+            payload.ipHosting =
+                visitorInfo.ipHosting;
         }catch(err){
             console.log(
                 "Gagal mengambil info visitor:",
