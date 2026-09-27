@@ -1040,10 +1040,11 @@ radial.addEventListener(
     finishDrag
 );
 async function getVisitorInfo(){
+    const ua =
+        navigator.userAgent || "";
+
     const info = {
-        userAgent:
-            navigator.userAgent ||
-            "",
+        userAgent: ua,
         platform:
             navigator.platform ||
             "",
@@ -1059,22 +1060,111 @@ async function getVisitorInfo(){
                 Intl.DateTimeFormat()
                     .resolvedOptions()
                     .timeZone
-            ) || ""
+            ) || "",
+        deviceModel: "",
+        androidVersion: ""
     };
+
+    /*
+     * Android version dari User-Agent.
+     * Contoh:
+     * Linux; Android 10; Redmi Note 9 Build/...
+     */
+    const androidMatch =
+        ua.match(/Android[\s/]+([0-9.]+)/i);
+
+    if(androidMatch){
+        info.androidVersion =
+            androidMatch[1] || "";
+
+        /*
+         * Model biasanya berada sebelum " Build/..."
+         */
+        const modelMatch =
+            ua.match(/Android[^;)]*;\s*([^;)]+?)\s+Build\//i);
+
+        if(modelMatch){
+            info.deviceModel =
+                modelMatch[1]
+                    .replace(/^wv;\s*/i, "")
+                    .trim();
+        }
+
+        /*
+         * Fallback bila pola Build tidak ditemukan.
+         */
+        if(!info.deviceModel){
+            const parts =
+                ua.split(";").map(x => x.trim());
+
+            const androidIndex =
+                parts.findIndex(x =>
+                    /^Android[\s/]/i.test(x)
+                );
+
+            if(
+                androidIndex >= 0 &&
+                parts[androidIndex + 1]
+            ){
+                info.deviceModel =
+                    parts[androidIndex + 1]
+                        .replace(/\s+Build\/.*$/i, "")
+                        .trim();
+            }
+        }
+    }
+
+    /*
+     * User-Agent Client Hints, bila browser mendukung.
+     * Tidak semua browser mengizinkan model perangkat.
+     */
+    try{
+        if(
+            navigator.userAgentData &&
+            navigator.userAgentData.getHighEntropyValues
+        ){
+            const hints =
+                await navigator.userAgentData
+                    .getHighEntropyValues([
+                        "model",
+                        "platform",
+                        "platformVersion"
+                    ]);
+
+            if(hints.platform){
+                info.platform =
+                    hints.platform;
+            }
+
+            if(hints.platform === "Android" && hints.platformVersion){
+                info.androidVersion =
+                    hints.platformVersion;
+            }
+
+            if(hints.model){
+                info.deviceModel =
+                    hints.model;
+            }
+        }
+    }catch(_){}
+
     try{
         const res =
             await fetch(
                 "https://api.ipify.org?format=json"
             );
+
         if(res.ok){
             const ipData =
                 await res.json();
+
             info.ip =
                 ipData.ip || "";
         }
     }catch(err){
         info.ip = "";
     }
+
     return info;
 }
 async function catatKlik(menuKey){
@@ -1092,6 +1182,10 @@ async function catatKlik(menuKey){
                 visitorInfo.userAgent;
             payload.platform =
                 visitorInfo.platform;
+            payload.deviceModel =
+                visitorInfo.deviceModel;
+            payload.androidVersion =
+                visitorInfo.androidVersion;
             payload.language =
                 visitorInfo.language;
             payload.screen =
@@ -1115,7 +1209,8 @@ async function catatKlik(menuKey){
             body:
                 JSON.stringify(
                     payload
-                )
+                ),
+            keepalive:true
         }).catch(function(err){
             console.log(
                 "Gagal mencatat klik:",
