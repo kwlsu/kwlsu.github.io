@@ -1149,109 +1149,95 @@ async function getVisitorInfo(){
     }catch(_){}
 
     /*
-     * IP + geolocation dari IP-API.
-     * Data lokasi IP bersifat PERKIRAAN, bukan GPS.
-     *
-     * Untuk file lokal (file://), endpoint HTTP dapat dipakai.
-     * Jika halaman dijalankan di HTTPS, browser dapat memblokir
-     * endpoint HTTP karena mixed content.
+     * IP + GeoIP via ipapi.co HTTPS.
+     * Endpoint ini memang mendukung request dari sisi browser.
      */
     try{
-        const fields =
-            [
-                "status",
-                "message",
-                "query",
-                "country",
-                "countryCode",
-                "regionName",
-                "city",
-                "lat",
-                "lon",
-                "timezone",
-                "isp",
-                "org",
-                "as",
-                "mobile",
-                "proxy",
-                "hosting"
-            ].join(",");
-
-        const apiUrl =
-            "https://ip-api.com/json/?fields=" +
-            encodeURIComponent(fields);
-
         const res =
-            await fetch(apiUrl, {
-                cache:"no-store"
-            });
+            await fetch(
+                "https://ipapi.co/json/",
+                {cache:"no-store"}
+            );
 
         if(res.ok){
             const ipData =
                 await res.json();
 
-            if(ipData.status === "success"){
+            if(ipData && !ipData.error){
                 info.ip =
-                    ipData.query || "";
+                    ipData.ip || "";
 
                 info.ipCountry =
+                    ipData.country_name ||
                     ipData.country || "";
 
                 info.ipCountryCode =
-                    ipData.countryCode || "";
+                    ipData.country_code || "";
 
                 info.ipRegion =
-                    ipData.regionName || "";
+                    ipData.region || "";
 
                 info.ipCity =
                     ipData.city || "";
 
                 info.ipLat =
-                    typeof ipData.lat === "number"
-                        ? ipData.lat
+                    typeof ipData.latitude === "number"
+                        ? ipData.latitude
                         : "";
 
                 info.ipLon =
-                    typeof ipData.lon === "number"
-                        ? ipData.lon
+                    typeof ipData.longitude === "number"
+                        ? ipData.longitude
                         : "";
 
                 info.ipTimezone =
                     ipData.timezone || "";
 
                 info.ipIsp =
-                    ipData.isp || "";
+                    ipData.org || "";
 
                 info.ipOrg =
                     ipData.org || "";
 
                 info.ipAs =
-                    ipData.as || "";
+                    ipData.asn || "";
 
-                info.ipMobile =
-                    !!ipData.mobile;
-
-                info.ipProxy =
-                    !!ipData.proxy;
-
-                info.ipHosting =
-                    !!ipData.hosting;
-            }else{
-                console.log(
-                    "IP-API gagal:",
-                    ipData.message || "unknown error"
-                );
-                info.ip = "";
+                // ipapi.co tidak menyediakan flag mobile/proxy/hosting
+                // pada response standar ini.
+                info.ipMobile = false;
+                info.ipProxy = false;
+                info.ipHosting = false;
             }
         }
     }catch(err){
         console.log(
-            "Gagal mengambil IP/GeoIP dari IP-API:",
+            "ipapi.co gagal:",
             err
         );
-        info.ip = "";
     }
 
+    /* Fallback khusus IP jika GeoIP gagal. */
+    if(!info.ip){
+        try{
+            const res =
+                await fetch(
+                    "https://api.ipify.org?format=json",
+                    {cache:"no-store"}
+                );
+
+            if(res.ok){
+                const ipData =
+                    await res.json();
+                info.ip =
+                    ipData.ip || "";
+            }
+        }catch(err){
+            console.log(
+                "ipify gagal:",
+                err
+            );
+        }
+    }
     return info;
 }
 async function catatKlik(menuKey){
