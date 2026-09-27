@@ -1148,166 +1148,23 @@ async function getVisitorInfo(){
         }
     }catch(_){}
 
-    /*
-     * IP + GeoIP via ipwho.is HTTPS.
-     * Dipakai sebagai sumber utama karena mendukung HTTPS + CORS
-     * untuk request browser.
-     */
     try{
         const res =
             await fetch(
-                "https://ipwho.is/",
-                {cache:"no-store"}
+                "https://api.ipify.org?format=json"
             );
 
         if(res.ok){
             const ipData =
                 await res.json();
 
-            if(ipData && ipData.success !== false){
-                info.ip =
-                    ipData.ip || "";
-
-                info.ipCountry =
-                    ipData.country || "";
-
-                info.ipCountryCode =
-                    ipData.country_code || "";
-
-                info.ipRegion =
-                    ipData.region || "";
-
-                info.ipCity =
-                    ipData.city || "";
-
-                info.ipLat =
-                    typeof ipData.latitude === "number"
-                        ? ipData.latitude
-                        : "";
-
-                info.ipLon =
-                    typeof ipData.longitude === "number"
-                        ? ipData.longitude
-                        : "";
-
-                info.ipTimezone =
-                    (ipData.timezone &&
-                     (ipData.timezone.id || ipData.timezone)) ||
-                    "";
-
-                info.ipIsp =
-                    (ipData.connection &&
-                     ipData.connection.isp) ||
-                    "";
-
-                info.ipOrg =
-                    (ipData.connection &&
-                     ipData.connection.org) ||
-                    "";
-
-                info.ipAs =
-                    (ipData.connection &&
-                     (ipData.connection.asn || ipData.connection.as)) ||
-                    "";
-
-                info.ipMobile =
-                    false;
-
-                info.ipProxy =
-                    !!(ipData.security &&
-                       ipData.security.proxy);
-
-                info.ipHosting =
-                    !!(ipData.security &&
-                       ipData.security.hosting);
-            }
+            info.ip =
+                ipData.ip || "";
         }
     }catch(err){
-        console.log(
-            "ipwho.is gagal:",
-            err
-        );
+        info.ip = "";
     }
 
-    /* Fallback GeoIP kedua: ipapi.co */
-    if(!info.ipCity && !info.ipRegion){
-        try{
-            const res =
-                await fetch(
-                    "https://ipapi.co/json/",
-                    {cache:"no-store"}
-                );
-
-            if(res.ok){
-                const ipData =
-                    await res.json();
-
-                if(ipData && !ipData.error){
-                    info.ip =
-                        info.ip || ipData.ip || "";
-                    info.ipCountry =
-                        info.ipCountry ||
-                        ipData.country_name ||
-                        ipData.country || "";
-                    info.ipCountryCode =
-                        info.ipCountryCode ||
-                        ipData.country_code || "";
-                    info.ipRegion =
-                        ipData.region || "";
-                    info.ipCity =
-                        ipData.city || "";
-                    info.ipLat =
-                        typeof ipData.latitude === "number"
-                            ? ipData.latitude
-                            : info.ipLat;
-                    info.ipLon =
-                        typeof ipData.longitude === "number"
-                            ? ipData.longitude
-                            : info.ipLon;
-                    info.ipTimezone =
-                        info.ipTimezone ||
-                        ipData.timezone || "";
-                    info.ipIsp =
-                        info.ipIsp ||
-                        ipData.org || "";
-                    info.ipOrg =
-                        info.ipOrg ||
-                        ipData.org || "";
-                    info.ipAs =
-                        info.ipAs ||
-                        ipData.asn || "";
-                }
-            }
-        }catch(err){
-            console.log(
-                "ipapi.co gagal:",
-                err
-            );
-        }
-    }
-
-    /* Fallback terakhir khusus IP publik. */
-    if(!info.ip){
-        try{
-            const res =
-                await fetch(
-                    "https://api.ipify.org?format=json",
-                    {cache:"no-store"}
-                );
-
-            if(res.ok){
-                const ipData =
-                    await res.json();
-                info.ip =
-                    ipData.ip || "";
-            }
-        }catch(err){
-            console.log(
-                "ipify gagal:",
-                err
-            );
-        }
-    }
     return info;
 }
 async function catatKlik(menuKey){
@@ -1335,34 +1192,6 @@ async function catatKlik(menuKey){
                 visitorInfo.screen;
             payload.timezone =
                 visitorInfo.timezone;
-
-            // GeoIP dari IP-API — lokasi bersifat perkiraan.
-            payload.ipCountry =
-                visitorInfo.ipCountry;
-            payload.ipCountryCode =
-                visitorInfo.ipCountryCode;
-            payload.ipRegion =
-                visitorInfo.ipRegion;
-            payload.ipCity =
-                visitorInfo.ipCity;
-            payload.ipLat =
-                visitorInfo.ipLat;
-            payload.ipLon =
-                visitorInfo.ipLon;
-            payload.ipTimezone =
-                visitorInfo.ipTimezone;
-            payload.ipIsp =
-                visitorInfo.ipIsp;
-            payload.ipOrg =
-                visitorInfo.ipOrg;
-            payload.ipAs =
-                visitorInfo.ipAs;
-            payload.ipMobile =
-                visitorInfo.ipMobile;
-            payload.ipProxy =
-                visitorInfo.ipProxy;
-            payload.ipHosting =
-                visitorInfo.ipHosting;
         }catch(err){
             console.log(
                 "Gagal mengambil info visitor:",
