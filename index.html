@@ -1149,13 +1149,14 @@ async function getVisitorInfo(){
     }catch(_){}
 
     /*
-     * IP + GeoIP via ipapi.co HTTPS.
-     * Endpoint ini memang mendukung request dari sisi browser.
+     * IP + GeoIP via ipwho.is HTTPS.
+     * Dipakai sebagai sumber utama karena mendukung HTTPS + CORS
+     * untuk request browser.
      */
     try{
         const res =
             await fetch(
-                "https://ipapi.co/json/",
+                "https://ipwho.is/",
                 {cache:"no-store"}
             );
 
@@ -1163,12 +1164,11 @@ async function getVisitorInfo(){
             const ipData =
                 await res.json();
 
-            if(ipData && !ipData.error){
+            if(ipData && ipData.success !== false){
                 info.ip =
                     ipData.ip || "";
 
                 info.ipCountry =
-                    ipData.country_name ||
                     ipData.country || "";
 
                 info.ipCountryCode =
@@ -1191,32 +1191,102 @@ async function getVisitorInfo(){
                         : "";
 
                 info.ipTimezone =
-                    ipData.timezone || "";
+                    (ipData.timezone &&
+                     (ipData.timezone.id || ipData.timezone)) ||
+                    "";
 
                 info.ipIsp =
-                    ipData.org || "";
+                    (ipData.connection &&
+                     ipData.connection.isp) ||
+                    "";
 
                 info.ipOrg =
-                    ipData.org || "";
+                    (ipData.connection &&
+                     ipData.connection.org) ||
+                    "";
 
                 info.ipAs =
-                    ipData.asn || "";
+                    (ipData.connection &&
+                     (ipData.connection.asn || ipData.connection.as)) ||
+                    "";
 
-                // ipapi.co tidak menyediakan flag mobile/proxy/hosting
-                // pada response standar ini.
-                info.ipMobile = false;
-                info.ipProxy = false;
-                info.ipHosting = false;
+                info.ipMobile =
+                    false;
+
+                info.ipProxy =
+                    !!(ipData.security &&
+                       ipData.security.proxy);
+
+                info.ipHosting =
+                    !!(ipData.security &&
+                       ipData.security.hosting);
             }
         }
     }catch(err){
         console.log(
-            "ipapi.co gagal:",
+            "ipwho.is gagal:",
             err
         );
     }
 
-    /* Fallback khusus IP jika GeoIP gagal. */
+    /* Fallback GeoIP kedua: ipapi.co */
+    if(!info.ipCity && !info.ipRegion){
+        try{
+            const res =
+                await fetch(
+                    "https://ipapi.co/json/",
+                    {cache:"no-store"}
+                );
+
+            if(res.ok){
+                const ipData =
+                    await res.json();
+
+                if(ipData && !ipData.error){
+                    info.ip =
+                        info.ip || ipData.ip || "";
+                    info.ipCountry =
+                        info.ipCountry ||
+                        ipData.country_name ||
+                        ipData.country || "";
+                    info.ipCountryCode =
+                        info.ipCountryCode ||
+                        ipData.country_code || "";
+                    info.ipRegion =
+                        ipData.region || "";
+                    info.ipCity =
+                        ipData.city || "";
+                    info.ipLat =
+                        typeof ipData.latitude === "number"
+                            ? ipData.latitude
+                            : info.ipLat;
+                    info.ipLon =
+                        typeof ipData.longitude === "number"
+                            ? ipData.longitude
+                            : info.ipLon;
+                    info.ipTimezone =
+                        info.ipTimezone ||
+                        ipData.timezone || "";
+                    info.ipIsp =
+                        info.ipIsp ||
+                        ipData.org || "";
+                    info.ipOrg =
+                        info.ipOrg ||
+                        ipData.org || "";
+                    info.ipAs =
+                        info.ipAs ||
+                        ipData.asn || "";
+                }
+            }
+        }catch(err){
+            console.log(
+                "ipapi.co gagal:",
+                err
+            );
+        }
+    }
+
+    /* Fallback terakhir khusus IP publik. */
     if(!info.ip){
         try{
             const res =
