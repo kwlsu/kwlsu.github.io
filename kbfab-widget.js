@@ -143,7 +143,7 @@
     ".kbchat-rec-dot{width:8px;height:8px;border-radius:50%;background:#ff5a5a;animation:kbchat-rec-pulse 1s ease-in-out infinite;flex-shrink:0;}" +
     "@keyframes kbchat-rec-pulse{0%,100%{opacity:1;}50%{opacity:.3;}}" +
     ".kbchat-audio-msg{display:flex;align-items:center;gap:8px;}" +
-    ".kbchat-audio-msg audio{height:32px;max-width:200px;}";
+    ".kbchat-audio-msg audio{height:32px;max-width:200px;}" +".kbchat-image-msg{display:block;margin-top:2px;}" +".kbchat-image-msg img{display:block;width:auto;max-width:230px;max-height:260px;border-radius:10px;object-fit:cover;cursor:pointer;border:1px solid rgba(255,255,255,.12);}" +".kbchat-image-msg img:active{transform:scale(.98);}" +".kbchat-image-name{font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;}" +".kbchat-image-btn{width:40px;height:40px;flex-shrink:0;border-radius:50%;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:rgba(255,255,255,.85);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;}" +".kbchat-image-btn:active{transform:scale(.92);}" +".kbchat-image-input{display:none;}";
 
     var SETTINGS_STYLE_ID = "kbfab-settings-style";
     var settingsInjected = false;
@@ -923,12 +923,21 @@
             chatInput.placeholder = chatOpts.placeholder || "Tulis pesan...";
             chatInput.maxLength = 300;
             chatInput.autocomplete = "off";
+            var chatImageBtn = el("button", "kbchat-image-btn", "🖼️");
+            chatImageBtn.type = "button";
+            chatImageBtn.setAttribute("aria-label", "Kirim gambar");
+            var chatImageInput = document.createElement("input");
+            chatImageInput.type = "file";
+            chatImageInput.accept = "image/jpeg,image/png,image/webp,image/gif";
+            chatImageInput.className = "kbchat-image-input";
             var chatMic = el("button", "kbchat-mic", "🎤");
             chatMic.type = "button";
             chatMic.setAttribute("aria-label", "Tahan untuk rekam suara");
             var chatSend = el("button", "kbchat-send", "➤");
             chatSend.type = "submit";
             chatSend.setAttribute("aria-label", "Kirim");
+            chatForm.appendChild(chatImageBtn);
+            chatForm.appendChild(chatImageInput);
             chatForm.appendChild(chatInput);
             if (chatOpts.voice !== false) chatForm.appendChild(chatMic);
             chatForm.appendChild(chatSend);
@@ -949,18 +958,37 @@
             document.body.appendChild(chatDim);
             document.body.appendChild(chatPanel);
 
+            var RANDOM_NAMES = [
+                "Dedi", "Rian", "Fajar", "Yoga", "Andi", "Budi", "Rizky", "Dimas",
+                "Agus", "Bayu", "Eka", "Fitri", "Gilang", "Hendra", "Indra", "Joko",
+                "Kevin", "Lina", "Maya", "Nadia", "Oscar", "Putra", "Qori", "Rina",
+                "Sinta", "Tomi", "Umar", "Vino", "Wawan", "Yusuf"
+            ];
+
             var myName = null;
             try { myName = localStorage.getItem(NAME_STORAGE_KEY); } catch (_) {}
+            // migrasi: nama lama format "TamuXXXX" -> ganti ke nama acak baru
+            if (myName && /^Tamu\d+$/.test(myName)) myName = null;
             if (!myName) {
-                myName = "Tamu" + Math.floor(1000 + Math.random() * 9000);
+                myName = RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
                 try { localStorage.setItem(NAME_STORAGE_KEY, myName); } catch (_) {}
+            }
+
+            var UUID_STORAGE_KEY = chatOpts.uuidStorageKey || "kbchat_uuid";
+            var myUuid = null;
+            try { myUuid = localStorage.getItem(UUID_STORAGE_KEY); } catch (_) {}
+            if (!myUuid) {
+                var randNum = Math.floor(10000 + Math.random() * 90000);
+                myUuid = "com_sunshine_freeform_" + randNum;
+                try { localStorage.setItem(UUID_STORAGE_KEY, myUuid); } catch (_) {}
             }
 
             var renderedKeys = new Map();
 
             function formatTime(ts) {
                 if (!ts) return "";
-                var d = new Date(ts);
+                var ms = ts < 1e12 ? ts * 1000 : ts; // dukung detik atau milidetik
+                var d = new Date(ms);
                 var hh = String(d.getHours()).padStart(2, "0");
                 var mm = String(d.getMinutes()).padStart(2, "0");
                 return hh + ":" + mm;
@@ -968,9 +996,11 @@
 
             function appendMessage(key, data) {
                 if (!data || renderedKeys.has(key)) return;
-                var bubble = el("div", "kbchat-msg" + (data.name === myName ? " kbchat-me" : ""));
-                var nameEl = el("div", "kbchat-msg-name", data.name || "");
+                var isMine = data.uuid ? (data.uuid === myUuid) : (data.sender === myName);
+                var bubble = el("div", "kbchat-msg" + (isMine ? " kbchat-me" : ""));
+                var nameEl = el("div", "kbchat-msg-name", data.sender || data.name || "");
                 bubble.appendChild(nameEl);
+
                 if (data.type === "audio" && data.audio) {
                     var audioWrap = el("div", "kbchat-audio-msg");
                     var audioEl = document.createElement("audio");
@@ -978,12 +1008,30 @@
                     audioEl.src = data.audio;
                     audioWrap.appendChild(audioEl);
                     bubble.appendChild(audioWrap);
+                } else if (data.type === "image" && data.image) {
+                    var imageWrap = el("div", "kbchat-image-msg");
+                    var imageLink = document.createElement("a");
+                    imageLink.href = data.image;
+                    imageLink.target = "_blank";
+                    imageLink.rel = "noopener noreferrer";
+                    var imageEl = document.createElement("img");
+                    imageEl.src = data.image;
+                    imageEl.alt = data.fileName || "Gambar";
+                    imageEl.loading = "lazy";
+                    imageEl.decoding = "async";
+                    imageLink.appendChild(imageEl);
+                    imageWrap.appendChild(imageLink);
+                    if (data.fileName) {
+                        imageWrap.appendChild(el("div", "kbchat-image-name", data.fileName));
+                    }
+                    bubble.appendChild(imageWrap);
                 } else {
                     var textEl = el("div", "", "");
                     textEl.textContent = data.text || "";
                     bubble.appendChild(textEl);
                 }
-                var timeEl = el("div", "kbchat-msg-time", formatTime(data.ts));
+
+                var timeEl = el("div", "kbchat-msg-time", formatTime(data.time || data.ts));
                 bubble.appendChild(timeEl);
                 renderedKeys.set(key, bubble);
                 chatMessages.appendChild(bubble);
@@ -998,12 +1046,12 @@
 
             async function loadHistory() {
                 try {
-                    var res = await fetch(CHAT_BASE_URL + ".json?orderBy=%22ts%22&limitToLast=" + CHAT_MAX_MESSAGES + "&t=" + Date.now());
+                    var res = await fetch(CHAT_BASE_URL + ".json?orderBy=%22time%22&limitToLast=" + CHAT_MAX_MESSAGES + "&t=" + Date.now());
                     if (!res.ok) return;
                     var data = await res.json();
                     if (!data) return;
                     Object.keys(data)
-                        .sort(function (a, b) { return (data[a].ts || 0) - (data[b].ts || 0); })
+                        .sort(function (a, b) { return (data[a].time || 0) - (data[b].time || 0); })
                         .forEach(function (key) { appendMessage(key, data[key]); });
                 } catch (_) {}
             }
@@ -1020,7 +1068,7 @@
                             if (payload.path === "/") {
                                 if (payload.data) {
                                     Object.keys(payload.data)
-                                        .sort(function (a, b) { return (payload.data[a].ts || 0) - (payload.data[b].ts || 0); })
+                                        .sort(function (a, b) { return (payload.data[a].time || 0) - (payload.data[b].time || 0); })
                                         .forEach(function (key) { appendMessage(key, payload.data[key]); });
                                 }
                             } else {
@@ -1039,11 +1087,11 @@
 
             async function trimHistory() {
                 try {
-                    var res = await fetch(CHAT_BASE_URL + ".json?orderBy=%22ts%22&t=" + Date.now());
+                    var res = await fetch(CHAT_BASE_URL + ".json?orderBy=%22time%22&t=" + Date.now());
                     if (!res.ok) return;
                     var data = await res.json();
                     if (!data) return;
-                    var keys = Object.keys(data).sort(function (a, b) { return (data[a].ts || 0) - (data[b].ts || 0); });
+                    var keys = Object.keys(data).sort(function (a, b) { return (data[a].time || 0) - (data[b].time || 0); });
                     var excess = keys.length - CHAT_MAX_MESSAGES;
                     if (excess <= 0) return;
                     var toDelete = keys.slice(0, excess);
@@ -1064,11 +1112,146 @@
                 } catch (_) {}
             }
 
+            var LEET_MAP = { o: "0", i: "1", e: "3", a: "4", s: "5", t: "7", g: "9", b: "8", l: "1" };
+
+            function escapeRegexClass(ch) {
+                return ch.replace(/[\]\\^-]/g, "\\$&");
+            }
+
+            function buildFuzzyPattern(word) {
+                var parts = [];
+                for (var i = 0; i < word.length; i++) {
+                    var ch = word[i].toLowerCase();
+                    var variant = LEET_MAP[ch];
+                    var classChars = escapeRegexClass(ch) + (variant ? escapeRegexClass(variant) : "");
+                    parts.push("[" + classChars + "]+");
+                }
+                // noise di antara huruf: spasi/simbol/titik dsb (bukan huruf/angka)
+                return parts.join("[^a-zA-Z0-9]*");
+            }
+
+            var BAD_WORDS = [
+                "anjing", "bangsat", "bego", "goblok", "tolol", "kontol", "memek",
+                "ngentot", "bajingan", "asu", "babi", "kampret", "brengsek", "tai",
+                "sialan", "pukimak", "keparat",
+                "jancok", "begok", "bgok", "mmk", "kntl", "fuck", "fck", "puki",
+                "cuki", "pepek", "tempek", "bodo", "gobl0k", "@njing", "memk",
+                "mmek", "jembot", "jembut", "jmbut", "jmbot"
+            ];
+
+            var BAD_WORD_REGEXES = BAD_WORDS.map(function (word) {
+                return new RegExp("(" + buildFuzzyPattern(word) + ")", "gi");
+            });
+
+            function censorText(text) {
+                var result = text;
+                BAD_WORD_REGEXES.forEach(function (re) {
+                    result = result.replace(re, function (match) {
+                        return match[0] + "*".repeat(Math.max(match.length - 1, 1));
+                    });
+                });
+                return result;
+            }
+
             async function sendMessage(text) {
                 text = text.trim();
                 if (!text) return;
-                sendPayload({ name: myName, text: text, ts: Date.now() });
+                text = censorText(text);
+                sendPayload({ sender: myName, text: text, time: Math.floor(Date.now() / 1000), uuid: myUuid });
             }
+
+            // ---- image upload: dikompres di browser lalu disimpan sebagai data URL di RTDB ----
+            var IMAGE_MAX_WIDTH = chatOpts.imageMaxWidth || 1280;
+            var IMAGE_MAX_HEIGHT = chatOpts.imageMaxHeight || 1280;
+            var IMAGE_QUALITY = chatOpts.imageQuality != null ? chatOpts.imageQuality : 0.78;
+            var IMAGE_MAX_BYTES = chatOpts.imageMaxBytes || 700 * 1024;
+
+            function readImageFile(file) {
+                return new Promise(function (resolve, reject) {
+                    if (!file || !/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
+                        reject(new Error("Format gambar tidak didukung."));
+                        return;
+                    }
+                    if (file.size > 12 * 1024 * 1024) {
+                        reject(new Error("Gambar terlalu besar. Maksimal 12 MB."));
+                        return;
+                    }
+
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        var img = new Image();
+                        img.onload = function () {
+                            var w = img.naturalWidth || img.width;
+                            var h = img.naturalHeight || img.height;
+                            var scale = Math.min(1, IMAGE_MAX_WIDTH / w, IMAGE_MAX_HEIGHT / h);
+                            var nw = Math.max(1, Math.round(w * scale));
+                            var nh = Math.max(1, Math.round(h * scale));
+
+                            var canvas = document.createElement("canvas");
+                            canvas.width = nw;
+                            canvas.height = nh;
+                            var ctx = canvas.getContext("2d");
+                            ctx.drawImage(img, 0, 0, nw, nh);
+
+                            // JPEG membuat ukuran RTDB jauh lebih kecil; PNG transparan tetap dipertahankan.
+                            var mime = file.type === "image/png" ? "image/png" : "image/jpeg";
+                            var quality = mime === "image/jpeg" ? IMAGE_QUALITY : undefined;
+                            var dataUrl = canvas.toDataURL(mime, quality);
+
+                            // Jika masih besar, turunkan kualitas JPEG bertahap.
+                            if (dataUrl.length * 0.75 > IMAGE_MAX_BYTES && mime === "image/jpeg") {
+                                var q = IMAGE_QUALITY;
+                                while (q > 0.45 && dataUrl.length * 0.75 > IMAGE_MAX_BYTES) {
+                                    q -= 0.08;
+                                    dataUrl = canvas.toDataURL("image/jpeg", q);
+                                }
+                            }
+
+                            resolve({
+                                dataUrl: dataUrl,
+                                name: file.name || "gambar",
+                                width: nw,
+                                height: nh
+                            });
+                        };
+                        img.onerror = function () { reject(new Error("Gambar tidak bisa dibaca.")); };
+                        img.src = reader.result;
+                    };
+                    reader.onerror = function () { reject(new Error("Gagal membaca file.")); };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            chatImageBtn.addEventListener("click", function () {
+                chatImageInput.click();
+            });
+
+            chatImageInput.addEventListener("change", async function () {
+                var file = chatImageInput.files && chatImageInput.files[0];
+                chatImageInput.value = "";
+                if (!file) return;
+
+                chatImageBtn.disabled = true;
+                chatImageBtn.textContent = "⏳";
+                try {
+                    var image = await readImageFile(file);
+                    await sendPayload({
+                        sender: myName,
+                        uuid: myUuid,
+                        type: "image",
+                        image: image.dataUrl,
+                        fileName: image.name,
+                        width: image.width,
+                        height: image.height,
+                        time: Math.floor(Date.now() / 1000)
+                    });
+                } catch (err) {
+                    alert(err && err.message ? err.message : "Gagal mengirim gambar.");
+                } finally {
+                    chatImageBtn.disabled = false;
+                    chatImageBtn.textContent = "🖼️";
+                }
+            });
 
             chatForm.addEventListener("submit", function (e) {
                 e.preventDefault();
@@ -1140,11 +1323,12 @@
                     var reader = new FileReader();
                     reader.onload = function () {
                         sendPayload({
-                            name: myName,
+                            sender: myName,
+                            uuid: myUuid,
                             type: "audio",
                             audio: reader.result,
                             duration: Math.round(durationMs / 1000),
-                            ts: Date.now()
+                            time: Math.floor(Date.now() / 1000)
                         });
                     };
                     reader.readAsDataURL(blob);
