@@ -350,12 +350,12 @@
 
   popup.innerHTML = `
     <div id="donation-popup-title">
-      ❤️ Dukung KIWOLASU
+      ❤️ Dukung 
     </div>
 
     <div id="donation-popup-text">
       Kalau script ini bermanfaat bagi anda , anda bisa memberikan
-      dukungan melalui donasi. sekecil apapun donasi anda sudah cukup membuat kami semangat untuk terus konsisten update 
+      dukungan melalui donasi. 
     </div>
 
     <button id="donation-now" type="button">
@@ -743,8 +743,8 @@
       layer.style.display = "none";
 
       showAlert(
-        "Terima kasih atas dukungannya ❤️",
-        "dukungan kamu berhasil dikirim. Terima kasih sudah mendukung KIWOLASU 🙏",
+        "Terima kasih ❤️",
+        "pesan kamu berhasil dikirim. ",
         "❤️"
       );
 
