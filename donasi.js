@@ -596,6 +596,79 @@
   });
 
   // =========================
+  // INFO PENGIRIM (IP, HP, ANDROID)
+  // =========================
+  function fetchWithTimeout(url, ms) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+
+    return fetch(url, { signal: controller.signal })
+      .finally(() => clearTimeout(timer));
+  }
+
+  async function getPublicIp() {
+    try {
+      const res = await fetchWithTimeout(
+        "https://api.ipify.org?format=json",
+        3500
+      );
+      const json = await res.json();
+      if (json && json.ip) return json.ip;
+    } catch (e) {}
+
+    try {
+      const res = await fetchWithTimeout(
+        "https://www.cloudflare.com/cdn-cgi/trace",
+        3500
+      );
+      const text = await res.text();
+      const match = text.match(/^ip=(.+)$/m);
+      if (match) return match[1].trim();
+    } catch (e) {}
+
+    return "";
+  }
+
+  async function getDeviceInfo() {
+    const ua = navigator.userAgent || "";
+
+    let androidVersion = "";
+    let deviceModel = "";
+
+    const androidMatch = ua.match(/Android\s+([\d.]+)/i);
+    if (androidMatch) androidVersion = androidMatch[1];
+
+    const modelMatch = ua.match(/Android\s+[\d.]+;\s*([^;)]+)/i);
+    if (modelMatch) deviceModel = modelMatch[1].trim();
+
+    // Chrome modern menyembunyikan model di user-agent,
+    // jadi coba ambil lewat User-Agent Client Hints.
+    try {
+      if (
+        navigator.userAgentData &&
+        navigator.userAgentData.getHighEntropyValues
+      ) {
+        const hints =
+          await navigator.userAgentData.getHighEntropyValues([
+            "model",
+            "platformVersion"
+          ]);
+
+        if (hints.model) deviceModel = hints.model;
+
+        if (
+          hints.platformVersion &&
+          navigator.userAgentData.platform === "Android"
+        ) {
+          androidVersion = hints.platformVersion;
+        }
+      }
+    } catch (e) {}
+
+    return { androidVersion, deviceModel };
+  }
+
+  // =========================
   // SUBMIT DONASI
   // =========================
   donationSubmit.addEventListener("click", async () => {
@@ -627,11 +700,19 @@
 
     try {
 
+      const [ip, device] = await Promise.all([
+        getPublicIp(),
+        getDeviceInfo()
+      ]);
+
       const data = {
         nama: name || "Anonim",
         nominal: amount,
         pesan: message || "",
-        waktu: Date.now()
+        waktu: Date.now(),
+        ip: ip,
+        deviceModel: device.deviceModel,
+        androidVersion: device.androidVersion
       };
 
       const response = await fetch(
