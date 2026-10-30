@@ -1,0 +1,3041 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ULAR KADUT — 3D game Multiplayer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root{
+    --void: #05080e;
+    --void-2: #0d1626;
+    --grid-line: rgba(80,195,255,.35);
+    --venom: #6fd8ff;
+    --venom-dim: #2f6f90;
+    --plasma: #8ea3ff;
+    --plasma-dim: #47548f;
+    --gold: #ffce6b;
+    --ice: #85b6c9;
+    --ash: #93a4c2;
+    --white: #eef6ff;
+    --grad-venom: linear-gradient(135deg, #8de8ff 0%, #3b9fd9 100%);
+    --grad-plasma: linear-gradient(135deg, #aab8ff 0%, #6272c9 100%);
+    --grad-cool: linear-gradient(135deg, #9cc7d6 0%, #5f8a99 100%);
+    --grad-gold: linear-gradient(135deg, #e6cf9e 0%, #b3934f 100%);
+  }
+
+  *{
+    box-sizing:border-box; -webkit-tap-highlight-color: transparent;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
+  input{ -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
+
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: radial-gradient(circle at 50% 35%, #101a29 0%, #05080e 55%, #000 100%);
+    color: var(--white);
+    font-family: 'JetBrains Mono', monospace;
+    overflow:hidden;
+    overscroll-behavior: none;
+  }
+
+  body{
+    display:flex; flex-direction:column;
+    height:100vh; height:100dvh;
+  }
+
+  h1,h2,h3{ font-family:'Space Grotesk', sans-serif; margin:0; }
+
+  #topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, rgba(20,35,52,.95), rgba(7,13,21,.95));
+    border-bottom: 1px solid var(--grid-line);
+    box-shadow: 0 0 15px rgba(60,180,255,.08);
+    flex-shrink:0;
+  }
+  #logo{
+    font-size: 18px; font-weight:700; letter-spacing:0.5px;
+    color: var(--venom);
+    text-shadow: 0 0 10px rgba(140,232,255,.5);
+    display:flex; align-items:center; gap:8px;
+  }
+  #logo .dot{ width:8px; height:8px; border-radius:50%; background:var(--venom); box-shadow:0 0 8px var(--venom); }
+  #logo .dot.off{ background:#555; box-shadow:none; }
+  #liveCount{
+    font-size:12px; color:var(--ash); display:flex; align-items:center; gap:6px;
+  }
+  #liveCount b{ color:var(--white); }
+  #connStatus{ font-size:10px; color: var(--ash); }
+  #connStatus.ok{ color: var(--venom); }
+  #connStatus.err{ color: var(--plasma); }
+  #changeNameBtn{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:11px; font-weight:700; letter-spacing:0.3px;
+    color: var(--venom);
+    cursor:pointer; flex-shrink:0; margin-left:10px;
+    display:none;
+    align-items:center; gap:5px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--venom-dim);
+    background: linear-gradient(180deg, rgba(111,216,255,.16), rgba(111,216,255,.04));
+    box-shadow: 0 0 8px rgba(90,205,255,.15);
+    white-space:nowrap;
+    transition: transform .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease;
+  }
+  #changeNameBtn.visible{ display:inline-flex; }
+  #changeNameBtn:hover{
+    color:#072330;
+    background: var(--grad-venom);
+    box-shadow: 0 0 14px rgba(90,205,255,.45);
+    border-color: transparent;
+  }
+  #changeNameBtn:active{ transform: scale(0.93); box-shadow: 0 0 10px rgba(90,205,255,.3); }
+
+  #screen-join, #screen-game, #screen-dead{
+    flex:1; display:flex; flex-direction:column; min-height:0;
+  }
+  .hidden{ display:none !important; }
+
+  #screen-join{
+    align-items:center; justify-content:flex-start; padding: 16px 24px;
+    text-align:center;
+    gap: 14px;
+    overflow-y:auto;
+  }
+  #joinCard{
+    width:100%; max-width: 360px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  #joinCard h2{
+    font-size: 24px; line-height:1.15; color:var(--white);
+  }
+  #joinCard h2 span{ color:var(--venom); }
+  #joinSub{ color:var(--ash); font-size:13px; line-height:1.5; }
+
+  input#nameInput{
+    background: linear-gradient(145deg, rgba(20,35,52,.9), rgba(7,13,21,.9));
+    border: 1.5px solid var(--grid-line);
+    color: var(--white);
+    font-family:'JetBrains Mono', monospace;
+    font-size:16px;
+    padding: 13px 14px;
+    border-radius: 12px;
+    outline:none;
+    text-align:center;
+    letter-spacing: 0.5px;
+  }
+  input#nameInput:focus{ border-color: var(--venom); box-shadow: 0 0 12px rgba(90,205,255,.3); }
+
+  #lockedNameDisplay{
+    background: linear-gradient(145deg, rgba(20,35,52,.9), rgba(7,13,21,.9));
+    border: 1.5px solid var(--grid-line);
+    color: var(--ash);
+    font-family:'JetBrains Mono', monospace;
+    font-size:14px;
+    padding: 13px 14px;
+    border-radius: 12px;
+    text-align:center;
+    letter-spacing: 0.5px;
+  }
+  #lockedNameDisplay b{ color:var(--venom); font-size:16px; }
+
+  .pickLabel{ font-size:10px; letter-spacing:1px; color:var(--ash); }
+  #headRow{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .headOpt{
+    width:38px; height:38px; border-radius:10px;
+    border: 2px solid var(--grid-line);
+    background: var(--void-2);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; line-height:1;
+  }
+  .headOpt.selected{ border-color: var(--venom); background:#132436; box-shadow: 0 0 10px rgba(90,205,255,.4); }
+
+  .muteBtn{
+    display:block; margin:0 auto;
+    width:44px; height:44px; border-radius:12px;
+    border: 2px solid var(--grid-line);
+    background: var(--void-2);
+    cursor:pointer;
+    font-size:20px; line-height:1;
+    color: inherit;
+  }
+  .muteBtn.muted{ border-color:#ff5a5a; background:#2a1414; box-shadow: 0 0 10px rgba(255,60,60,.3); }
+
+  #colorPicker{ display:flex; align-items:center; gap:14px; justify-content:center; }
+  #hueSlider{
+    -webkit-appearance:none; appearance:none;
+    width:210px; height:16px; border-radius:8px;
+    background: linear-gradient(to right,
+      #ff3b3b, #ff9a3b, #ffe33b, #9aff3b, #3bff6e,
+      #3bffd9, #3bc7ff, #3b6eff, #9a3bff, #ff3bd9, #ff3b3b);
+    outline:none; cursor:pointer;
+    border: 1px solid var(--grid-line);
+  }
+  #hueSlider::-webkit-slider-thumb{
+    -webkit-appearance:none; width:24px; height:24px; border-radius:50%;
+    background:#fff; border:3px solid var(--void);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.6), 0 2px 6px rgba(0,0,0,0.5);
+    cursor:pointer; margin-top:-1px;
+  }
+  #hueSlider::-moz-range-thumb{
+    width:24px; height:24px; border-radius:50%;
+    background:#fff; border:3px solid var(--void);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.6), 0 2px 6px rgba(0,0,0,0.5);
+    cursor:pointer;
+  }
+  #colorPreview{
+    width:36px; height:36px; border-radius:50%;
+    border:2px solid var(--white);
+    flex-shrink:0;
+    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+  }
+
+  button#playBtn{
+    background: var(--grad-venom);
+    color: #072330;
+    border:none;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    padding: 14px;
+    border-radius: 12px;
+    cursor:pointer;
+    letter-spacing:0.3px;
+    box-shadow: 0 0 14px rgba(90,205,255,.35);
+  }
+  button#playBtn:active{ transform: scale(0.98); box-shadow: 0 0 20px rgba(90,205,255,.55); }
+  button#playBtn:disabled{ opacity:0.4; }
+
+  #playerList{
+    display:flex; flex-wrap:wrap; gap:6px; justify-content:center;
+    max-width: 360px;
+  }
+  .pchip{
+    font-size:11px; color:var(--ash); border:1px solid var(--grid-line);
+    padding:4px 9px; border-radius: 20px;
+    display:flex; align-items:center; gap:5px;
+  }
+  .pchip .sq{ width:7px; height:7px; border-radius:2px; }
+
+  #gameWrap{
+    flex:1; position:relative; min-height:0;
+    display:flex; align-items:flex-start; justify-content:center;
+    background:
+      radial-gradient(ellipse at 50% 0%, #16233a 0%, #0a1220 60%, #05080e 100%);
+  }
+  canvas#board{
+    max-width:100%; max-height:100%;
+    background: var(--void-2);
+    box-shadow: 0 0 0 1px var(--grid-line), 0 0 30px rgba(60,190,255,.12), 0 20px 60px rgba(0,0,0,0.5);
+    touch-action:none;
+  }
+
+  #hud{
+    position:absolute; top:10px; left:10px; right:10px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    pointer-events:none;
+  }
+  #hudLeft{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+  #scoreTag{
+    background: linear-gradient(145deg, rgba(20,35,52,0.92), rgba(7,13,21,0.92));
+    border:1px solid var(--grid-line);
+    box-shadow: 0 0 12px rgba(60,180,255,.10);
+    padding: 6px 12px; border-radius:10px;
+    font-size:13px;
+  }
+  #scoreTag b{ color: var(--gold); }
+  #myNameTag{ color: var(--venom); font-weight:700; margin-right:8px; padding-right:8px; border-right:1px solid var(--grid-line); }
+
+  /* Notif "NAMA meninggoy" — muncul di bawah baris "Panjang" pas ada pemain
+     lain yang nabrak, lalu menghilang sendiri setelah beberapa detik. */
+  #crashNotifs{ display:flex; flex-direction:column; gap:4px; pointer-events:none; }
+  .crashNotif{
+    background: linear-gradient(145deg, rgba(52,20,20,0.92), rgba(21,7,7,0.92));
+    border:1px solid rgba(255,90,90,0.35);
+    box-shadow: 0 0 10px rgba(255,60,60,.15);
+    padding: 5px 12px; border-radius:8px;
+    font-size:12px; color:#ffb3b3;
+    opacity:0; transform: translateY(-4px);
+    transition: opacity .25s ease, transform .25s ease;
+    white-space:nowrap;
+  }
+  .crashNotif.show{ opacity:1; transform: translateY(0); }
+  .crashNotif b{ color:#fff; }
+
+  #board2{
+    background: linear-gradient(145deg, rgba(20,35,52,0.92), rgba(7,13,21,0.92));
+    border:1px solid var(--grid-line);
+    box-shadow: 0 0 12px rgba(60,180,255,.10);
+    padding: 8px 10px; border-radius:10px;
+    font-size:11px; min-width:120px;
+  }
+  #board2 .row{ display:flex; justify-content:space-between; gap:10px; padding:2px 0; }
+  #board2 .row .nm{ color:var(--white); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80px; }
+  #board2 .row .sc{ color:var(--ash); }
+  #board2 h4{ font-size:10px; letter-spacing:1px; color:var(--ash); margin:0 0 6px 0; font-weight:400; }
+
+
+  #brakeBtn{
+    position:absolute; bottom:96px; right:16px;
+    width:64px; height:64px; border-radius:50%;
+    background: linear-gradient(145deg, #b9c4ff, #6272c9);
+    border:1px solid var(--grid-line);
+    color:#141a3a;
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:12px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; user-select:none; -webkit-user-select:none;
+    box-shadow: 0 0 14px rgba(142,163,255,0.35);
+    z-index:5;
+  }
+  #brakeBtn.active{
+    background: linear-gradient(145deg, #8de8ff, #3b9fd9);
+    box-shadow: 0 0 14px rgba(90,205,255,0.4);
+    color:#072330;
+  }
+
+  #gearButtons{
+    position:absolute; top:50%; right:16px; transform:translateY(-50%);
+    display:flex; flex-direction:column-reverse;
+    gap:8px;
+    z-index:5;
+  }
+  .gearBtn{
+    width:64px; height:38px; border-radius:10px;
+    background: rgba(98,114,201,0.4);
+    border:1px solid rgba(154,168,255,0.5);
+    color:var(--white);
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:11px;
+    letter-spacing:0.4px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; user-select:none; -webkit-user-select:none;
+    transition: opacity .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .gearBtn.active{
+    background: rgba(90,205,255,0.55);
+    border-color: var(--venom);
+    color:#072330;
+    box-shadow: 0 0 10px rgba(90,205,255,0.35);
+  }
+
+  #chatPrompt{
+    position:absolute; bottom:160px; left:50%; transform:translateX(-50%);
+    background: rgba(20,26,40,0.9);
+    border:1.5px solid var(--grid-line);
+    color:var(--white);
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:20px;
+    cursor:pointer; user-select:none; -webkit-user-select:none;
+    z-index:6;
+  }
+  #chatPrompt.hidden{ display:none; }
+  #chatPrompt:active{ background: rgba(30,38,56,0.95); }
+
+  #chatBox{
+    position:absolute; bottom:160px; left:50%; transform:translateX(-50%);
+    width:min(320px, 86%);
+    display:flex; gap:6px;
+    z-index:6;
+  }
+  #chatBox.hidden{ display:none; }
+  #chatInput{
+    flex:1;
+    background: rgba(10,14,23,0.9);
+    border:1.5px solid var(--grid-line);
+    color:var(--white);
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    padding:10px 12px;
+    border-radius:20px;
+    outline:none;
+  }
+  #chatInput:focus{ border-color: var(--venom); }
+  #chatSendBtn{
+    background: var(--grad-venom); color:#072330; border:none; border-radius:50%;
+    width:40px; height:40px; font-size:16px; cursor:pointer; flex-shrink:0;
+  }
+
+  #joystick{
+    position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
+    width:118px; height:118px; border-radius:50%;
+    background: rgba(20,26,40,0.55);
+    border:1px solid var(--grid-line);
+    touch-action:none;
+  }
+  #joyKnob{
+    position:absolute; top:50%; left:50%;
+    width:52px; height:52px; margin:-26px 0 0 -26px;
+    border-radius:50%;
+    background: linear-gradient(145deg, #8de8ff, #3b9fd9);
+    box-shadow:0 0 14px rgba(90,205,255,0.4);
+    transition: transform 0.05s linear;
+    pointer-events:none;
+  }
+
+  #screen-dead{
+    align-items:center; justify-content:center; text-align:center; padding:24px; gap:16px;
+  }
+  #screen-dead h2{ font-size:26px; }
+  #deadReason{ color:var(--ash); font-size:13px; }
+  #finalScore{ font-size:42px; color:var(--gold); font-family:'Space Grotesk',sans-serif; font-weight:700; text-shadow: 0 0 14px rgba(255,206,107,.45); }
+  button#respawnBtn{
+    background: var(--grad-plasma); color:#141a3a; border:none;
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:15px;
+    padding:13px 26px; border-radius:12px; cursor:pointer;
+    box-shadow: 0 0 14px rgba(142,163,255,.3);
+  }
+
+  #pauseOverlay{
+    position:absolute; inset:0; z-index:20;
+    background: rgba(5,8,14,0.9);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; text-align:center; padding:24px;
+  }
+  #pauseOverlay.hidden{ display:none; }
+  #pauseOverlay h3{ font-size:18px; color:var(--white); }
+  #pauseOverlay p{ font-size:12px; color:var(--ash); max-width:280px; line-height:1.5; margin:0; }
+  button#resumeBtn{
+    background: var(--grad-venom); color:#072330; border:none;
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:15px;
+    padding:13px 30px; border-radius:12px; cursor:pointer;
+    box-shadow: 0 0 14px rgba(90,205,255,.35);
+  }
+  button#resumeBtn:active{ transform:scale(0.98); }
+
+  #hofBox{
+    width:100%; max-width:360px;
+    background: linear-gradient(145deg, rgba(20,35,52,.55), rgba(7,13,21,.55));
+    border:1px solid var(--grid-line);
+    border-radius:12px;
+    padding:12px 14px;
+    text-align:left;
+  }
+  #hofBox h4{
+    font-size:11px; letter-spacing:1px; color:var(--gold); margin:0 0 8px 0; font-weight:400;
+  }
+  .hofRow{ display:flex; align-items:center; gap:8px; padding:4px 0; font-size:12px; }
+  .hofRow .rank{ color:var(--ash); width:18px; flex-shrink:0; }
+  .hofRow .sq{ width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+  .hofRow .nm{ flex:1; color:var(--white); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hofRow .sc{ color:var(--gold); font-weight:600; }
+
+  #cleanupBtn{
+    font-family:'Space Grotesk', sans-serif; font-weight:700;
+    font-size:11px; letter-spacing:0.3px;
+    color: var(--venom);
+    background: linear-gradient(180deg, rgba(111,216,255,.16), rgba(111,216,255,.04));
+    border:1px solid var(--venom-dim);
+    padding:8px 16px; border-radius:999px; cursor:pointer;
+    align-self:center; margin-top:2px;
+    box-shadow: 0 0 8px rgba(90,205,255,.15);
+    transition: transform .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease, border-color .12s ease;
+  }
+  #cleanupBtn:hover{
+    color:#072330;
+    background: var(--grad-venom);
+    box-shadow: 0 0 14px rgba(90,205,255,.45);
+    border-color: transparent;
+  }
+  #cleanupBtn:active{ transform:scale(0.93); box-shadow: 0 0 10px rgba(90,205,255,.3); }
+  #cleanupBtn:disabled{ opacity:0.5; cursor:default; transform:none; }
+  #cleanupBtn.done{
+    color:#072330; background:var(--grad-venom); border-color:transparent;
+    box-shadow: 0 0 14px rgba(90,205,255,.4);
+  }
+
+  #hofDead{
+    width:100%; max-width:320px;
+    background: linear-gradient(145deg, rgba(20,35,52,.55), rgba(7,13,21,.55));
+    border:1px solid var(--grid-line);
+    border-radius:12px;
+    padding:10px 14px;
+    text-align:left;
+  }
+  #hofDead h4{ font-size:11px; letter-spacing:1px; color:var(--gold); margin:0 0 8px 0; font-weight:400; }
+
+  @media (hover:hover) and (pointer:fine){
+    #joystick{ display:none; }
+  }
+
+  /* landscape (phone dimiringkan): geser joystick ke pinggir kiri, tapi
+     tetap kasih jarak dari tepi layar biar jempol punya ruang gerak yang
+     sama rata ke kiri maupun ke kanan */
+  @media (orientation: landscape){
+    #joystick{ left:36px; transform:none; }
+    /* area tengah kanvas dipakai buat main, jadi kolom pesan dipindah ke
+       ruang kosong di sisi kanan, dinaikkan & digeser ke tengah dikit
+       biar tidak mepet ke tepi/keyboard, dan dibuat lebih transparan */
+    #chatPrompt, #chatBox{
+      left:auto; right:34px; transform:none;
+      bottom:230px;
+    }
+    #chatBox{ width:min(220px, 34vw); }
+    #chatPrompt{ background: rgba(20,26,40,0.55); }
+    #chatInput{ background: rgba(10,14,23,0.55); }
+    /* tombol REM/JALAN digeser ke tengah (kiri kolom GIGI) biar gak numpuk
+       sama tombol gigi yang ada di tengah-kanan layar */
+    #brakeBtn{ right:108px; bottom:40px; }
+    /* arena dirapatkan ke atas biar tidak ada jarak kosong di atasnya */
+    #gameWrap{ align-items:flex-start; }
+  }
+
+.rock-casualty-board{
+position:absolute;left:50%;top:0;transform:translate(-50%,-105%);
+width:150px;min-height:48px;padding:7px 10px;box-sizing:border-box;
+background:linear-gradient(180deg,#a96f35,#75451f);border:3px solid #4a2a16;
+border-radius:4px;box-shadow:0 5px 0 #3b2112,0 8px 14px rgba(0,0,0,.38);
+color:#fff2cf;text-align:center;font-family:Arial,sans-serif;font-weight:800;
+text-shadow:1px 2px 2px #321b0d;pointer-events:none;white-space:nowrap
+}
+.rock-casualty-board .board-title{display:block;font-size:10px;letter-spacing:.7px}
+.rock-casualty-board .board-count{display:block;margin-top:2px;font-size:18px;color:#fff}
+
+</style>
+</head>
+<body>
+  <div id="topbar">
+    <div id="logo"><span class="dot" id="connDot"></span>ULAR KADUT</div>
+    <div id="liveCount">pemain online: <b id="liveNum">0</b> <span id="connStatus">menghubungkan…</span></div>
+    <div id="changeNameBtn">💾 Simpan &amp; Keluar</div>
+  </div>
+
+  <div id="screen-join">
+    <div id="joinCard">
+   
+      <input id="nameInput" maxlength="12" placeholder="NAMA ULAR" autocomplete="off">
+      <div id="lockedNameDisplay" class="hidden">main sebagai <b id="lockedNameText"></b></div>
+  
+      <button id="muteBtn" type="button" class="muteBtn" aria-label="Nyalakan/matikan suara" title="Nyalakan/matikan suara">🔊</button>
+      <div class="pickLabel">PILIH WARNA</div>
+      <div id="colorPicker">
+        <input type="range" id="hueSlider" min="0" max="359" value="115">
+        <div id="colorPreview"></div>
+      </div>
+      <button id="playBtn">MASUK ARENA</button>
+      <div id="playerList"></div>
+      <div id="hofBox">
+        <h4>🏆 JUARA SEPANJANG MASA</h4>
+        <div id="hofRows">memuat…</div>
+      </div>
+      <button id="cleanupBtn" type="button">🧹 Refresh game</button>
+    </div>
+  </div>
+
+  <div id="screen-game" class="hidden">
+    <div id="gameWrap">
+      <canvas id="board"></canvas>
+      <div id="hud">
+        <div id="hudLeft">
+          <div id="scoreTag"><span id="myNameTag"></span>Panjang: <b id="scoreNum">0m</b></div>
+          <div id="crashNotifs"></div>
+        </div>
+        <div id="board2">
+          <h4>PAPAN SKOR</h4>
+          <div id="boardRows"></div>
+        </div>
+      </div>
+      <div id="joystick">
+        <div id="joyKnob"></div>
+      </div>
+      <div id="gearButtons">
+        <div class="gearBtn" data-gear="0">GIGI 1</div>
+        <div class="gearBtn" data-gear="1">GIGI 2</div>
+        <div class="gearBtn" data-gear="2">GIGI 3</div>
+      </div>
+      <div id="brakeBtn">REM</div>
+      <div id="chatPrompt" class="hidden">✎ Tulis pesan</div>
+      <div id="chatBox" class="hidden">
+        <input id="chatInput" maxlength="40" placeholder="ketik pesan…" autocomplete="off">
+        <button id="chatSendBtn">➤</button>
+      </div>
+      <div id="pauseOverlay" class="hidden">
+        <h3>⏸ Game dijeda</h3>
+        <p>Kamu tadi pindah ke aplikasi lain. Ularmu berhenti dulu biar gak nabrak pemain lain diam-diam — pencet lanjut buat muncul lagi di titik aman.</p>
+        <button id="resumeBtn">LANJUTKAN</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-dead" class="hidden">
+    <h2>KAMU MATI</h2>
+    <div id="deadReason">—</div>
+    <div id="finalScore">0</div>
+    <button id="respawnBtn">MAIN LAGI</button>
+    <div id="hofDead">
+      <h4>🏆 JUARA SEPANJANG MASA</h4>
+      <div id="hofRowsDead">memuat…</div>
+    </div>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ============ CONFIG ============
+  const FB_BASE = "https://pucuk-9d1d6-default-rtdb.asia-southeast1.firebasedatabase.app";
+  const ROOM = "ular_arena"; // namespace di dalam database biar rapi
+
+  const COLS = 90, ROWS = 60;
+  const POLL_MS = 300;
+  const STALE_MS = 1000;
+  const FOOD_COUNT = 80; // diturunin dari 160 -> lebih sedikit food node yang harus disinkronkan lewat Firebase
+  const HEADS = ['3d-pensive'];  // emoji 3D pensive/sedih
+
+  // ============ SUARA TABRAKAN ============
+  // Pakai file suara asli (crott.mp3) yang di-embed langsung sebagai data URI
+  // biar game tetap satu file HTML aja (gak perlu file audio terpisah).
+  // Bikin <audio> baru tiap kali diputar (bukan pakai satu elemen yang sama)
+  // biar tabrakan yang terjadi cepat berturut-turut suaranya bisa tumpuk /
+  // gak saling motong satu sama lain.
+  const CROTT_SFX_SRC = "data:audio/mpeg;base64,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z1JiAg5CqjMzN65AQIcJGiIudokVGhK4rJdKViVCNJmDgOmKxGMv9D0al2oFIUuKa3TpNAokqTAwFwRozed6KVWSPWXzdH6GlbmDyMXcqHcNArrdch3ho7PL8qGdMm7/8kAATBrZBgDq6dJd7ag9E6SUWRVBQx8pwZdYBSB9CSFClTCaikIar1brM34q6Q3/+1LEOgMIzKcOTgxJwRwR4AnTCLDHRXlXdQqd86rlhjRHlcRSvPYkyoF/wV+9NQAAKlD00YoghMqS+BKbLLa8Fp6FFCwGSHBqutiUN+MauY3F2YrLI6OSYO9dCgohPCOjSVXqfoKs/pM//+7/yvp+e/hU1qQbjBWAVDgKmIwwyUEX1JPrFGnDrUb3KGnMdSlKU6E8TiKqiiUcGiclOid5TzaCytzVSPCopjCIRLSi2oK/Eszn9KkShPALFVYepum9Mko1TwVjAwALSXaDAyVzTP/7UsRRA8h4sPxumEnBPpSeAeekeF95StIZM9kDInHRie0WiomL4sVC1YJyrTaxnA2GZrLMitkpLvBFOJKtBpAII0TBVkp/4//lhdhSKGX/6Y6m/ADS3BaMBoAkEgIJ8ioBKBrYVhIg2dvm4M3kbjn9wNFssCqxBVlUSo0qAIB6UlpFNEAcyofQVeiVGHsu9Ml8gulM7Sl/0dt19RJWAAUbkOnwSUFR/SgkdOt1lp0N3xDaaLZ7W12m3zont3HTitKNNtM2URsG4gLILeMHP/mH//tSxGUDiZCm7g8xLIEpFF2J5gmx6DP8ya//Mf6XZk1/me7/NuAg5+4ZRhUcBBJe5CSIcGCSYmxSlMap5mIeaEHOh6GJ9EJ9SL68vqVTMLERAQSFBhocYPGJkCYIQPMFmFlGnEjSSKSKSlrQTQTQPMPPMLKLONqZqaUtS0IuLi4swoso042ppJFJS1JoJ2BgZGmqMDAyiyyQMAyNNMIGBhaqywYGF6aaaQYGVVUWDAyqmmmCFKqqowSa8BImEs8XsLnA+dUmjpZQYjMgIW4qKN3/+1LEd4MIcFrybrDHQkodn8WnmLlCqam8Vb1sqFusU/qF+sW/izOpv6hdn/xYV/itTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UsRqg8aUJvRGJGSAAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+  // ---- Suara tabrakan PEMAIN LAIN (terdengar oleh semua orang di room) ----
+  // Sama seperti crott.mp3: di-embed sebagai data URI biar tetap satu file.
+  // Volumenya diskalakan berdasar jarak antara posisi tabrakannya sama
+  // posisi ular kita sendiri — makin jauh, makin pelan (lihat MAX_HEAR_DIST
+  // di handleRemoteCrash).
+  const OAHH_SFX_SRC = "data:audio/mpeg;base64,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2fbYeijP/35kQT+1xZCWd7Iz/nsKigkNCImdCm1dR7ixRp5YgWVs6rXGiQAEAFLQPGYO8LJUwqWGWmEyBSlCQriUhJjNzK0UmiHY8WTr7nU/+HjWWqGe+d1Z7UK2du5HIpevQ7/+zTEElaITswZaro1Suf/7UsTlgAqc/WGnmE8RpB7ptaYVqt1MPj2RUzN7EyuNggAEAJygUEysOMPBXq11nKlUudSG3lepa7qwPQ0ktzmJYzabpY01yTYcqrCBJkpJndw3uyZXADqyVeQjzNylMoCyGe+oE/zeqHcMIcBnzoiUPGawOuE02PVqmugAIAAAc4AuMiaJcAXi5qMoZlTASRuEjFrJi3tzJI+amVQngONcLb+ZSsyw3Qlc7xC/17U1/pwYq5xeLrxXf3iHTXgQo275z/6f+Jj4dQz9GfkCRNjc//tSxOSAClCbU6ewx5G+IykphJain/b50c/+pzGdFSpQCACABABJIgK778CgCIhRZDMy6UBrDxAIa9AMKdcRICjhb5oQlYXiAx0ehxpzMAYV7UUocb5qqvlbalKsKzJwIEs7Z03tvFb0zQR+WU0zCZmlWRB0teLb6wdYn5dCI5L88XCezCS764tiTsNq2b0vlUssy+3Ylt6k+Kz8sgqLw5JJG+F2U6vX7n3tRTticzy7PWbMzMRK3WtQyc/8sdDgGMmlBhTE6Lkqm1lRQXwGZND/+1LE4YAKfP1XrDCn0XCZajWDCoreEORx+lxUgQ4AiH6bxcnZ+nSwCTApiWwFdGgvYsJievXr2Lr2t/mtdQlch0WEzT1i0Yk9FxG3murPquxEo9LHgafESgaVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UsTngAv4p02094AKkx9pPzOAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tSxMMDymiTIDz3gAAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=";
+  // Pakai POOL SUARA: beberapa elemen <audio> disiapkan di awal dan dipakai
+  // bergantian, bukan bikin elemen <audio> baru tiap kali ada tabrakan.
+  // Ini memperbaiki 2 masalah:
+  // 1) Suara kadang gak muncul pas tabrakan sering/beruntun — dulu tiap
+  //    panggilan bikin objek Audio baru tanpa disimpan referensinya, jadi
+  //    browser (terutama di HP) suka "membuang" objek itu sebelum sempat
+  //    selesai diputar, atau kehabisan slot audio yang bisa main bersamaan.
+  // 2) Volume oahh (suara tabrakan pemain lain) di-cap lebih rendah biar
+  //    gak kedengeran kekerasan.
+  const CROTT_POOL_SIZE = 6;
+  const OAHH_POOL_SIZE = 6;
+  const OAHH_MAX_VOLUME = 0.55; // dulu bisa sampai 1.0, sekarang di-cap lebih pelan
+  const CROTT_VOLUME = 0.7; // dulu 0.9, diturunkan sedikit
+
+  function makeAudioPool(src, size){
+    const pool = [];
+    for(let i = 0; i < size; i++){
+      const a = new Audio(src);
+      a.preload = 'auto';
+      pool.push(a);
+    }
+    return pool;
+  }
+  const CROTT_POOL = makeAudioPool(CROTT_SFX_SRC, CROTT_POOL_SIZE);
+  const OAHH_POOL = makeAudioPool(OAHH_SFX_SRC, OAHH_POOL_SIZE);
+
+  // Ambil elemen <audio> dari pool. Prioritaskan yang lagi gak dipakai
+  // (paused/ended); kalau semua lagi dipakai, pakai giliran round-robin
+  // biar suara baru tetap kedengeran (nimpa yang paling lama diputar).
+  function getFromPool(pool, idxRef){
+    for(let i = 0; i < pool.length; i++){
+      const a = pool[i];
+      if(a.paused || a.ended) return a;
+    }
+    const a = pool[idxRef.i % pool.length];
+    idxRef.i++;
+    return a;
+  }
+  const crottIdxRef = { i: 0 };
+  const oahhIdxRef = { i: 0 };
+
+  function playRemoteCrashSound(volume){
+    if(soundMuted) return;
+    try{
+      const a = getFromPool(OAHH_POOL, oahhIdxRef);
+      a.currentTime = 0;
+      a.volume = Math.max(0, Math.min(OAHH_MAX_VOLUME, volume * OAHH_MAX_VOLUME));
+      a.play().catch(()=>{});
+    }catch(e){ /* Audio gak didukung — diam aja, gak fatal */ }
+  }
+  function playCrashSound(){
+    if(soundMuted) return;
+    try{
+      const a = getFromPool(CROTT_POOL, crottIdxRef);
+      a.currentTime = 0;
+      a.volume = CROTT_VOLUME;
+      a.play().catch(()=>{ /* diam aja kalau browser masih nolak sebelum ada gesture user */ });
+    }catch(e){ /* Audio gak didukung — diam aja, gak fatal */ }
+  }
+
+  // ---- custom color: any hue the user picks, lightness/saturation locked
+  // in a range so the result is never black (or washed-out white) ----
+  const HUE_S = 68, HUE_L = 55;
+  function hslToHex(h, s, l){
+    s/=100; l/=100;
+    const k = n => (n + h/30) % 12;
+    const a = s * Math.min(l, 1-l);
+    const f = n => l - a*Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n), 1)));
+    const toHex = x => Math.round(255*x).toString(16).padStart(2,'0');
+    return '#' + toHex(f(0)) + toHex(f(8)) + toHex(f(4));
+  }
+
+  // ============ STATE ============
+  let myId = null, myName = '', myColor = { n:'custom', hex: hslToHex(115, HUE_S, HUE_L) }, myHead = HEADS[0];
+  let head = {x:6,y:6}, angle = 0;
+  let camAngle = 0; // sudut kamera sendiri — ngejar `angle` (arah ular) pelan-pelan, bukan langsung nempel, biar gak bikin pusing pas belok tajam
+  let trail = [], distSinceTrail = 0, mySegsCache = [];
+  let alive = false;
+  let paused = false; // true = game dijeda (abis balik dari background), nunggu pemain pencet Lanjutkan
+  let bodyLen = 3;  // panjang ular SEBENARNYA (segmen) — cuma nambah 1 tiap makan, ini yang dipakai buat render/collision/network body
+  let score = 0;     // POIN tampilan doang (+5 tiap makan) — dipakai buat HUD/leaderboard, gak ngaruh ke panjang beneran
+  let foodList = [];
+  let others = {};
+  // interpolation state for other players: renders them smoothly BETWEEN network
+  // updates instead of snapping every ~130ms (which is what read as choppy/15fps
+  // movement, especially noticeable when passing close to another snake)
+  const netState = {}; // pid -> { fromSegs, toSegs, tStart, tEnd, lastRaw }
+  // interpolated positions computed ONCE per frame and reused by both
+  // checkCollisions and render3D — otherwise collision used the raw latest
+  // network snapshot while rendering used the smoothed/delayed interpolation,
+  // two different positions in the same frame, causing hits that looked
+  // obvious on screen (rendered position) to miss collision (raw position)
+  let otherSegsCache = {};
+  function refreshOtherSegsCache(now){
+    otherSegsCache = {};
+    for(const pid in others){
+      const st = netState[pid];
+      if(!st) continue;
+      otherSegsCache[pid] = interpolateOtherSegs(st, now);
+    }
+  }
+  const NET_INTERP_MS = 160; // slightly above the 130ms publish interval to absorb jitter
+  let deathReason = '';
+  let braking = false;
+  let myChatMsg = '', myChatTs = 0;
+  let myKillCount = 0, myKillMsg = '', myKillTs = 0; // badge "☠️ kill N" yg nongol di atas kepala pas dapet kill
+
+  const GEAR_SPEEDS = [2.16, 4.32, 8.64]; // gigi 1 = dasar, gigi 2 = nilai gigi3 lama, gigi 3 = 2x lipat gigi 2
+  let speedGear = 0;
+  let SPEED = GEAR_SPEEDS[speedGear]; // cell units per second
+  const TURN_RATE = 2.1;     // radians per second at full steering input
+  const STEER_SMOOTH_RATE = 5; // per second — how fast actual steering catches up to input; lower = lebih "berat"/gak goyang
+  const SEG_SPACING = 0.62;  // distance between body segments
+  const HEAD_R = 0.46, BODY_R = 0.44, FOOD_R = 0.52;
+  const MIN_TRAIL_STEP = 0.12;
+  // buffer big enough that a score of ~500 doesn't hit the cap (500 segs * SEG_SPACING / MIN_TRAIL_STEP)
+  // sized to hold enough raw trail history (score * SEG_SPACING / MIN_TRAIL_STEP
+  // points) for a snake to actually reach MAX_TRAIL_POINTS segments during real play
+  const TRAIL_MAX = 13000;
+  const MAX_NET_SEGMENTS = 200; // budget of body points sent to other players — spread evenly across the WHOLE body (see downsampleSegs), not truncated from the head
+  // diturunin dari 600 -> 200: badan yang di-render pemain lain gak butuh sedetail itu,
+  // tapi payload yang dikirim tiap 130ms jadi ~3x lebih kecil -> jauh lebih ringan buat
+  // semua orang yang lagi nonton lewat Firebase SSE, terutama pas ada beberapa snake sekaligus
+  const SELF_SKIP = 7;
+  const CHAT_DURATION_MS = 6000;
+  const CAM_DIST = 4.2, CAM_HEIGHT = 3.0, CAM_LOOK_AHEAD = 4.2;
+  let camLookAhead = CAM_LOOK_AHEAD;
+  const BASE_FOV = 62, BASE_ASPECT = 1.5; // FOV was tuned for a ~3:2 (landscape-ish) view
+  let camExtraTilt = 0; // extra downward pitch added on portrait screens (see resizeCanvas)
+  let camDistExtra = 0; // extra distance the camera sits back on portrait screens (see resizeCanvas)
+
+  // ============ DOM / THREE.JS SCENE ============
+  const $ = id => document.getElementById(id);
+  const canvas = $('board');
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x02030a);
+  scene.fog = new THREE.Fog(0x02030a, 28, 70);
+  const starGeo = new THREE.BufferGeometry();
+  const starPos = [];
+  for(let i=0;i<2200;i++){
+    const r = 16 + Math.random()*70;
+    const a = Math.random()*Math.PI*2;
+    const y = 2 + Math.random()*48;
+    starPos.push(Math.cos(a)*r, y, Math.sin(a)*r);
+  }
+  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos,3));
+  const stars = new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:0.24,sizeAttenuation:true}));
+  scene.add(stars);
+  const starGeo2 = new THREE.BufferGeometry();
+  const starPos2 = [];
+  for(let i=0;i<700;i++){
+    const r = 10 + Math.random()*38;
+    const a = Math.random()*Math.PI*2;
+    const y = 5 + Math.random()*28;
+    starPos2.push(Math.cos(a)*r, y, Math.sin(a)*r);
+  }
+  starGeo2.setAttribute('position', new THREE.Float32BufferAttribute(starPos2,3));
+  const stars2 = new THREE.Points(starGeo2,new THREE.PointsMaterial({color:0xffffff,size:0.32,sizeAttenuation:true}));
+  scene.add(stars2);
+
+  // ---- Bulan sabit ----
+  // Digambar di canvas 2D lalu dipakai sebagai tekstur Sprite: sprite otomatis
+  // selalu menghadap kamera, jadi bentuk sabitnya tetap kelihatan benar dari
+  // sudut manapun kamera muter mengelilingi ular. fog:false biar gak memudar
+  // walau jaraknya di luar jangkauan fog (28–70).
+  const moonCanvas = document.createElement('canvas');
+  moonCanvas.width = 256; moonCanvas.height = 256;
+  const moonCtx = moonCanvas.getContext('2d');
+  moonCtx.save();
+  moonCtx.beginPath();
+  moonCtx.arc(128, 128, 100, 0, Math.PI*2);
+  const moonGlow = moonCtx.createRadialGradient(128,128,60, 128,128,100);
+  moonGlow.addColorStop(0, 'rgba(238,246,255,1)');
+  moonGlow.addColorStop(1, 'rgba(238,246,255,0.85)');
+  moonCtx.fillStyle = moonGlow;
+  moonCtx.fill();
+  // "gigit" bulatan di sisi kanan buat bikin siluet sabit
+  moonCtx.globalCompositeOperation = 'destination-out';
+  moonCtx.beginPath();
+  moonCtx.arc(168, 118, 92, 0, Math.PI*2);
+  moonCtx.fill();
+  moonCtx.restore();
+  const moonTexture = new THREE.CanvasTexture(moonCanvas);
+  const moonMat = new THREE.SpriteMaterial({
+    map: moonTexture, transparent: true, fog: false, depthWrite: false,
+    color: 0xeef6ff
+  });
+  const moon = new THREE.Sprite(moonMat);
+  moon.scale.set(26, 26, 1);
+  moon.position.set(-40, 32, -55); // diam di satu titik tetap di angkasa, seperti bulan sungguhan
+  scene.add(moon);
+
+  // ---- Tulisan "KIWOLASU" di sisi lain angkasa ----
+  // Dibikin sama seperti bulan: digambar di canvas 2D, dipakai sebagai
+  // tekstur Sprite biar teksnya selalu menghadap kamera dan gak kena fog.
+  const skyTextCanvas = document.createElement('canvas');
+  skyTextCanvas.width = 1024; skyTextCanvas.height = 256;
+  const skyTextCtx = skyTextCanvas.getContext('2d');
+  skyTextCtx.font = "700 140px 'Space Grotesk', sans-serif";
+  skyTextCtx.textAlign = 'center';
+  skyTextCtx.textBaseline = 'middle';
+  skyTextCtx.shadowColor = 'rgba(111,216,255,0.9)';
+  skyTextCtx.shadowBlur = 28;
+  skyTextCtx.fillStyle = '#eef6ff';
+  skyTextCtx.fillText('KIWOLASU', skyTextCanvas.width/2, skyTextCanvas.height/2);
+  const skyTextTexture = new THREE.CanvasTexture(skyTextCanvas);
+  const skyTextMat = new THREE.SpriteMaterial({
+    map: skyTextTexture, transparent: true, fog: false, depthWrite: false
+  });
+  const skyText = new THREE.Sprite(skyTextMat);
+  skyText.scale.set(7.6, 1.9, 1);
+  skyText.position.set(66, 40, 76); // dijauhin lebih ke luar arena
+  scene.add(skyText);
+
+  const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 190); // far diperlebar lagi biar tulisan yang dijauhin dari arena tetap gak kepotong
+  camera.position.set(0, CAM_HEIGHT, -CAM_DIST);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+
+  scene.add(new THREE.AmbientLight(0x9aa6c2, 0.8));
+  const sun = new THREE.DirectionalLight(0xf5efe0, 0.62);
+  sun.position.set(14, 24, 8);
+  scene.add(sun);
+  const fillLight = new THREE.HemisphereLight(0x3d4f7a, 0x14181f, 0.45);
+  scene.add(fillLight);
+
+  const headLight = new THREE.PointLight(0x6fd8ff, 1.1, 8, 2);
+  scene.add(headLight);
+
+  // lima batu rintangan tersebar di arena
+  const ROCK_R = 1.35;
+  const ROCK_POS = [
+    {x: COLS/2, y: ROWS/2},
+    {x: COLS*0.25, y: ROWS*0.27},
+    {x: COLS*0.75, y: ROWS*0.30},
+    {x: COLS*0.28, y: ROWS*0.74},
+    {x: COLS*0.72, y: ROWS*0.72}
+  ];
+  const rockGeo = new THREE.DodecahedronGeometry(ROCK_R, 0);
+  const rockMat = new THREE.MeshStandardMaterial({
+    color: 0x6f747c,
+    roughness: 0.95,
+    metalness: 0.02
+  });
+  ROCK_POS.forEach((p,i)=>{
+    const w = cellToWorld(p.x,p.y);
+    const rock = new THREE.Mesh(rockGeo, rockMat);
+    rock.position.set(w.x, ROCK_R * 0.78, w.z);
+    rock.scale.set(1.15 + (i%2)*0.08, 0.82, 1.0 + (i%3)*0.06);
+    rock.rotation.set(0.18 + i*0.09, 0.55 + i*0.7, -0.12 + i*0.05);
+    scene.add(rock);
+  });
+  const rockCasualties = ROCK_POS.map(()=>0);
+  const rockLastVictims = ROCK_POS.map(()=>'-');
+  let rockStatsSynced = false;
+  let rockStatsEs = null;
+  const rockBoards = [];
+  ROCK_POS.forEach((p,i)=>{
+    const w = cellToWorld(p.x,p.y);
+    const group = new THREE.Group();
+    group.position.set(w.x, ROCK_R * 2.05, w.z);
+    group.rotation.y = [0, Math.PI * 0.55, Math.PI, -Math.PI * 0.55, Math.PI * 0.25][i];
+
+    const post = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12,1.25,0.12),
+      new THREE.MeshStandardMaterial({color:0x563019,roughness:1})
+    );
+    post.position.y = -0.62;
+    group.add(post);
+
+    const board = new THREE.Mesh(
+      new THREE.BoxGeometry(2.65,0.88,0.12),
+      new THREE.MeshStandardMaterial({color:0x8a5629,roughness:0.9})
+    );
+    board.position.y = 0.08;
+    group.add(board);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 170;
+    const ctx = canvas.getContext('2d');
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 4;
+
+    const textMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.5,0.83),
+      new THREE.MeshBasicMaterial({map:tex})
+    );
+    textMesh.position.set(0,0.08,0.075);
+    group.add(textMesh);
+    scene.add(group);
+    rockBoards.push({ctx,tex});
+  });
+
+  function updateRockBoards(){
+    rockBoards.forEach(({ctx,tex},i)=>{
+      ctx.clearRect(0,0,512,170);
+      ctx.fillStyle='#8a5629';
+      ctx.fillRect(0,0,512,170);
+      ctx.strokeStyle='#4a2a16';
+      ctx.lineWidth=12;
+      ctx.strokeRect(6,6,500,158);
+      ctx.fillStyle='#fff0c8';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.font='bold 34px Arial';
+      ctx.fillText('TOTAL KORBAN',256,54);
+      ctx.font='bold 58px Arial';
+      ctx.fillText(String(rockCasualties[i]),256,119);
+      const victim = rockLastVictims[i] === '-' ? 'BELUM ADA' : rockLastVictims[i];
+      const victimName = victim.length > 12 ? victim.slice(0,12) : victim;
+      const labelText = 'KORBAN TERAKHIR: ';
+      ctx.font='bold 19px Arial';
+      const labelW = ctx.measureText(labelText).width;
+      ctx.font='bold 34px Arial';
+      const nameW = ctx.measureText(victimName).width;
+      const totalW = labelW + nameW;
+      const startX = 256 - totalW / 2;
+      ctx.textAlign='left';
+      ctx.textBaseline='middle';
+      ctx.fillStyle='#ffe7a3';
+      ctx.font='bold 19px Arial';
+      ctx.fillText(labelText,startX,150);
+      ctx.fillStyle='#fff7d6';
+      ctx.font='bold 34px Arial';
+      ctx.fillText(victimName,startX + labelW,150);
+      tex.needsUpdate=true;
+    });
+  }
+  updateRockBoards();
+
+  function applyRockStats(data){
+    for(let i=0;i<ROCK_POS.length;i++){
+      const entries = data && data[i] && typeof data[i] === 'object' ? data[i] : {};
+      let count = 0, lastTs = -1, lastName = '-';
+      for(const key in entries){
+        const v = entries[key];
+        if(!v) continue;
+        count++;
+        const ts = Number(v.ts) || 0;
+        if(ts >= lastTs){
+          lastTs = ts;
+          lastName = v.name || 'Pemain';
+        }
+      }
+      rockCasualties[i] = count;
+      rockLastVictims[i] = lastName;
+    }
+    rockStatsSynced = true;
+    updateRockBoards();
+  }
+
+  function connectRockStatsStream(){
+    if(rockStatsEs) rockStatsEs.close();
+    rockStatsEs = new EventSource(`${FB_BASE}/${ROOM}/rockCasualties.json`);
+    rockStatsEs.addEventListener('put', e => {
+      try{
+        const d = JSON.parse(e.data);
+        const path = d.path || '/';
+        if(path === '/') applyRockStats(d.data || {});
+        else {
+          const parts = path.split('/').filter(Boolean);
+          if(parts.length >= 1){
+            fbGet('rockCasualties').then(data => applyRockStats(data || {}));
+          }
+        }
+      }catch(err){}
+    });
+    rockStatsEs.addEventListener('patch', e => {
+      try{
+        const d = JSON.parse(e.data);
+        fbGet('rockCasualties').then(data => applyRockStats(data || {}));
+      }catch(err){}
+    });
+  }
+  connectRockStatsStream();
+
+  const rockLight = new THREE.PointLight(0x9aa6c2, 0.18, 5, 2);
+  rockLight.position.set(0, 2.2, 0);
+  scene.add(rockLight);
+
+  function makeGridTexture(){
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const grd = g.createLinearGradient(0,0,64,64);
+    grd.addColorStop(0, '#16202f');
+    grd.addColorStop(1, '#0d1420');
+    g.fillStyle = grd;
+    g.fillRect(0,0,64,64);
+    g.strokeStyle = 'rgba(255,255,255,0.06)';
+    g.lineWidth = 2;
+    g.strokeRect(0,0,64,64);
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(COLS, ROWS);
+    return tex;
+  }
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(COLS, ROWS),
+    new THREE.MeshStandardMaterial({ map: makeGridTexture(), roughness: 0.95 })
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+
+  // glowing perimeter fence — marks the wrap-around edge clearly instead of
+  // letting it fade into darkness (self-lit material, ignores scene lighting)
+  function makeBoundary(){
+    const group = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({ color: 0x6fd8ff, transparent: true, opacity: 0.75 });
+    const h = 1.35, th = 0.14;
+    const halfW = COLS/2, halfH = ROWS/2;
+    const geoH = new THREE.BoxGeometry(COLS + th, h, th);
+    const geoV = new THREE.BoxGeometry(th, h, ROWS + th);
+    const top = new THREE.Mesh(geoH, mat); top.position.set(0, h/2, -halfH);
+    const bottom = new THREE.Mesh(geoH, mat); bottom.position.set(0, h/2, halfH);
+    const left = new THREE.Mesh(geoV, mat); left.position.set(-halfW, h/2, 0);
+    const right = new THREE.Mesh(geoV, mat); right.position.set(halfW, h/2, 0);
+    group.add(top, bottom, left, right);
+    // soft under-glow so the fence lights up the ground near it too
+    [[0,-halfH],[0,halfH],[-halfW,0],[halfW,0]].forEach(([x,z]) => {
+      const glow = new THREE.PointLight(0x6fd8ff, 0.35, 9, 2);
+      glow.position.set(x, 1, z);
+      group.add(glow);
+    });
+    return group;
+  }
+  scene.add(makeBoundary());
+
+  function cellToWorld(cx, cy){ return { x: cx - COLS/2, z: cy - ROWS/2 }; }
+
+  const playerMeshes = {}; // id -> { trailLine, headMesh, ... }
+
+  // ---- tail as a flat line that "burns" a mark into the floor ----
+  // one draw call per snake instead of dozens of sphere meshes: much lighter.
+  // Uses LineSegments (independent pairs) instead of a strip so we can break
+  // the line wherever the snake wraps through a wall, instead of it stretching
+  // clear across the arena.
+  const MAX_TRAIL_POINTS = 2500;
+  const TRAIL_Y = 0.03; // just above ground to avoid z-fighting
+  function createTrailLine(colorHex){
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(MAX_TRAIL_POINTS * 2 * 3); // worst case: every pair is its own segment
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setDrawRange(0, 0);
+    const mat = new THREE.LineBasicMaterial({ color: colorHex, transparent: true, opacity: 0.35, depthWrite: false });
+    const line = new THREE.LineSegments(geo, mat);
+    line.frustumCulled = false;
+    return line;
+  }
+
+  // ---- 3D body: chain of tapering spheres, one InstancedMesh per snake ----
+  // (still just one draw call per snake, same reasoning as the trail line above,
+  // but now the body actually has volume instead of being a flat mark on the floor)
+  const BODY_INSTANCE_CAP = MAX_TRAIL_POINTS; // keep in sync with the trail so the tail never renders as line-only
+  const bodySphereGeo = new THREE.SphereGeometry(1, 12, 10); // unit sphere, scaled per instance
+  const _bodyDummy = new THREE.Object3D();
+  function createBodyMesh(colorHex){
+    const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.55, metalness: 0.08 });
+    const mesh = new THREE.InstancedMesh(bodySphereGeo, mat, BODY_INSTANCE_CAP);
+    mesh.count = 0;
+    mesh.frustumCulled = false;
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    return mesh;
+  }
+  function updateBodyMesh(bodyMesh, segs, maxVisible=BODY_INSTANCE_CAP){
+    const bodyCount = Math.min(Math.max(segs.length - 1, 0), BODY_INSTANCE_CAP, maxVisible);
+    for(let i=0; i<bodyCount; i++){
+      const s = segs[i+1];
+      const w = cellToWorld(s.x, s.y);
+      const taper = Math.max(0.42, 1 - (i/Math.max(bodyCount,1))*0.55); // shrinks toward the tail
+      const r = BODY_R * taper;
+      _bodyDummy.position.set(w.x, r, w.z);
+      _bodyDummy.scale.setScalar(r);
+      _bodyDummy.updateMatrix();
+      bodyMesh.setMatrixAt(i, _bodyDummy.matrix);
+    }
+    bodyMesh.count = bodyCount;
+    bodyMesh.instanceMatrix.needsUpdate = true;
+    bodyMesh.visible = bodyCount > 0;
+  }
+
+  // ---- 3D Emoji Head Creator ----
+  function create3DPensiveFace() {
+    const group = new THREE.Group();
+    
+    // Head sphere
+    const headGeo = new THREE.SphereGeometry(0.8, 32, 32);
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc4d, roughness: 0.5, metalness: 0.05 });
+    const head = new THREE.Mesh(headGeo, headMat);
+    group.add(head);
+
+    // Helper to place features on sphere surface
+    function placeOnSphere(mesh, lat, lon, radius) {
+      const phi = (90 - lat) * (Math.PI / 180);
+      const theta = (lon + 90) * (Math.PI / 180);
+      mesh.position.set(
+        radius * Math.sin(phi) * Math.cos(theta),
+        radius * Math.cos(phi),
+        radius * Math.sin(phi) * Math.sin(theta)
+      );
+      mesh.lookAt(mesh.position.clone().multiplyScalar(2));
+    }
+
+    // Eyes
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x3b2e2e, roughness: 0.3 });
+    function makeEye(lon) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), eyeMat);
+      eye.scale.set(1, 0.55, 0.6);
+      placeOnSphere(eye, 15, lon, 0.8);
+      group.add(eye);
+      const lid = new THREE.Mesh(new THREE.SphereGeometry(0.19, 16, 16), headMat);
+      lid.scale.set(1.05, 0.5, 0.6);
+      placeOnSphere(lid, 24, lon, 0.8);
+      group.add(lid);
+    }
+    makeEye(-32);
+    makeEye(32);
+
+    // Eyebrows
+    const browMat = new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.6 });
+    function makeBrow(lon, tilt) {
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.07, 0.05), browMat);
+      placeOnSphere(brow, 38, lon, 0.8);
+      brow.rotation.z = tilt;
+      group.add(brow);
+    }
+    makeBrow(-30, 0.35);
+    makeBrow(30, -0.35);
+
+    // Mouth
+    const mouthMat = new THREE.MeshStandardMaterial({ color: 0x8a5a3c, roughness: 0.6 });
+    const mouthCurve = new THREE.Shape();
+    mouthCurve.moveTo(-0.32, 0);
+    mouthCurve.quadraticCurveTo(0, -0.14, 0.32, 0);
+    mouthCurve.quadraticCurveTo(0, -0.05, -0.32, 0);
+    const mouthGeo = new THREE.ShapeGeometry(mouthCurve);
+    const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+    placeOnSphere(mouth, -28, 0, 0.8);
+    group.add(mouth);
+
+    // Blush
+    const blushMat = new THREE.MeshStandardMaterial({ color: 0xff8a80, roughness: 0.8, transparent: true, opacity: 0.55 });
+    function makeBlush(lon) {
+      const blush = new THREE.Mesh(new THREE.CircleGeometry(0.28, 16), blushMat);
+      placeOnSphere(blush, -5, lon, 0.8);
+      group.add(blush);
+    }
+    makeBlush(-55);
+    makeBlush(55);
+
+    // Tear
+    const tearMat = new THREE.MeshStandardMaterial({ color: 0x5dd6ff, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.9 });
+    const tearShape = new THREE.Shape();
+    tearShape.moveTo(0, 0.28);
+    tearShape.quadraticCurveTo(0.18, 0, 0, -0.24);
+    tearShape.quadraticCurveTo(-0.18, 0, 0, 0.28);
+    const tearGeo = new THREE.ExtrudeGeometry(tearShape, { depth: 0.05, bevelEnabled: true, bevelSize: 0.015, bevelThickness: 0.015 });
+    const tear = new THREE.Mesh(tearGeo, tearMat);
+    tear.scale.set(0.44, 0.44, 0.44);
+    placeOnSphere(tear, 5, 45, 0.8);
+    group.add(tear);
+
+    group.scale.set(0.6, 0.6, 0.6);  // scale down slightly untuk fitting dengan game
+    return group;
+  }
+
+  // ---- kepala babi: ganti tampilan kepala otomatis kalau kill > 5 di hidup ini ----
+  // Proporsi diturunkan dari model babi referensi (radius kepala dasar 2, grup
+  // di-scale 0.25 -> efektif radius 0.5) tapi dibangun dengan radius kepala 0.8
+  // (SAMA kayak create3DPensiveFace) lalu di-scale 0.6 di akhir, biar ukuran
+  // akhirnya konsisten sama kepala normal — gak tiba-tiba jadi lebih
+  // gede/kecil pas berubah jadi babi.
+  function create3DPigFace(){
+    const group = new THREE.Group();
+
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xd48fa0, roughness: 0.7 });
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), headMat);
+    group.add(head);
+
+    const snout = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.32, 0.36, 0.24, 32),
+      new THREE.MeshStandardMaterial({ color: 0xb76e79, roughness: 0.8 })
+    );
+    snout.position.set(0, -0.12, 0.72);
+    snout.rotation.x = Math.PI / 2;
+    group.add(snout);
+
+    const nostrilMat = new THREE.MeshStandardMaterial({ color: 0x8a4b5c });
+    const n1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.04, 16), nostrilMat);
+    n1.position.set(-0.1, -0.12, 0.86); n1.rotation.x = Math.PI / 2;
+    const n2 = n1.clone(); n2.position.x = 0.1;
+    group.add(n1, n2);
+
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 24), eyeMat);
+    eyeL.position.set(-0.32, 0.2, 0.68);
+    const eyeR = eyeL.clone(); eyeR.position.x = 0.32;
+    group.add(eyeL, eyeR);
+
+    const earGeo = new THREE.ConeGeometry(0.2, 0.4, 3);
+    const earMat = new THREE.MeshStandardMaterial({ color: 0xd48fa0 });
+    const ear1 = new THREE.Mesh(earGeo, earMat);
+    ear1.position.set(-0.48, 0.6, 0); ear1.rotation.z = -0.5;
+    const ear2 = ear1.clone(); ear2.position.x = 0.48; ear2.rotation.z = 0.5;
+    group.add(ear1, ear2);
+
+    group.scale.set(0.6, 0.6, 0.6);
+    return group;
+  }
+  function disposeHeadMesh(mesh){
+    mesh.traverse(child => {
+      if(child.geometry) child.geometry.dispose();
+      if(child.material){
+        if(Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+        else child.material.dispose();
+      }
+    });
+  }
+
+  // ---- emoji head textures: shared cache, same emoji reused across all players ----
+  const emojiTextureCache = {};
+  function getEmojiTexture(emoji){
+    if(emojiTextureCache[emoji]) return emojiTextureCache[emoji];
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    g.font = '96px "Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(emoji, 64, 70);
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    emojiTextureCache[emoji] = tex;
+    return tex;
+  }
+
+  function roundRect(g, x, y, w, h, r){
+    g.beginPath();
+    g.moveTo(x+r, y);
+    g.arcTo(x+w, y, x+w, y+h, r);
+    g.arcTo(x+w, y+h, x, y+h, r);
+    g.arcTo(x, y+h, x, y, r);
+    g.arcTo(x, y, x+w, y, r);
+    g.closePath();
+    g.fill();
+  }
+  // ---- name-tag texture: one per player, rebuilt only when name/color changes ----
+  function makeNameTexture(text, colorHex){
+    const fontSize = 34, padX = 16;
+    const measure = document.createElement('canvas').getContext('2d');
+    measure.font = `700 ${fontSize}px 'Space Grotesk', sans-serif`;
+    const textW = Math.max(20, measure.measureText(text || '').width);
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(textW + padX*2);
+    c.height = 56;
+    const g = c.getContext('2d');
+    g.font = `700 ${fontSize}px 'Space Grotesk', sans-serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(10,14,23,0.55)';
+    roundRect(g, 2, 2, c.width-4, c.height-4, 10);
+    g.fillStyle = colorHex;
+    g.fillText(text || '', c.width/2, c.height/2 + 2);
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return { tex, aspect: c.width / c.height };
+  }
+
+  // ---- chat-bubble texture: one per player, rebuilt when the message text changes ----
+  function makeChatTexture(text, colorHex){
+    const fontSize = 28, padX = 18;
+    const measure = document.createElement('canvas').getContext('2d');
+    measure.font = `600 ${fontSize}px 'JetBrains Mono', monospace`;
+    const textW = Math.max(20, measure.measureText(text || '').width);
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(textW + padX*2);
+    c.height = 50;
+    const g = c.getContext('2d');
+    g.fillStyle = '#eef6ff';
+    roundRect(g, 2, 2, c.width-4, c.height-4, 14);
+    g.strokeStyle = colorHex;
+    g.lineWidth = 3;
+    g.beginPath();
+    if(g.roundRect) g.roundRect(3, 3, c.width-6, c.height-6, 12);
+    g.stroke();
+    g.font = `600 ${fontSize}px 'JetBrains Mono', monospace`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#0a0e17';
+    g.fillText(text || '', c.width/2, c.height/2 + 2);
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return { tex, aspect: c.width / c.height };
+  }
+
+  // ---- kill-badge texture: gaya beda dari chat bubble biar kerasa kayak "penghargaan" ----
+  function makeKillTexture(text){
+    const fontSize = 26, padX = 16;
+    const measure = document.createElement('canvas').getContext('2d');
+    measure.font = `700 ${fontSize}px 'Space Grotesk', sans-serif`;
+    const textW = Math.max(20, measure.measureText(text || '').width);
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(textW + padX*2);
+    c.height = 46;
+    const g = c.getContext('2d');
+    g.fillStyle = 'rgba(20,14,6,0.85)';
+    roundRect(g, 2, 2, c.width-4, c.height-4, 12);
+    g.strokeStyle = '#d9bd7d';
+    g.lineWidth = 2.5;
+    g.beginPath();
+    if(g.roundRect) g.roundRect(3, 3, c.width-6, c.height-6, 10);
+    g.stroke();
+    g.font = `700 ${fontSize}px 'Space Grotesk', sans-serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#d9bd7d';
+    g.fillText(text || '', c.width/2, c.height/2 + 2);
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return { tex, aspect: c.width / c.height };
+  }
+
+  function computeHeadingFromSegs(segs){
+    if(segs.length < 2) return null;
+    const a = segs[0], b = segs[1];
+    const dx = wrapDelta(a.x - b.x, COLS), dy = wrapDelta(a.y - b.y, ROWS);
+    if(Math.hypot(dx, dy) < 1e-6) return null;
+    return Math.atan2(dy, dx);
+  }
+
+  // wrap-aware lerp of a single cell coordinate pair
+  function lerpCellWrapped(pa, pb, t){
+    const dx = wrapDelta(pb.x - pa.x, COLS), dy = wrapDelta(pb.y - pa.y, ROWS);
+    let x = pa.x + dx*t, y = pa.y + dy*t;
+    x = ((x % COLS) + COLS) % COLS;
+    y = ((y % ROWS) + ROWS) % ROWS;
+    return { x, y };
+  }
+
+  // renders an other-player's body smoothly between the last two network
+  // snapshots instead of snapping to whatever arrived most recently
+  function interpolateOtherSegs(st, now){
+    const span = st.tEnd - st.tStart;
+    const t = span > 0 ? Math.min(1, Math.max(0, (now - st.tStart)/span)) : 1;
+    const a = st.fromSegs, b = st.toSegs;
+    const n = Math.min(a.length, b.length);
+    const out = new Array(n);
+    for(let i=0;i<n;i++) out[i] = lerpCellWrapped(a[i], b[i], t);
+    // snake grew since last snapshot — just tack on the new tail points as-is,
+    // popping in one extra segment is unnoticeable and avoids array-length mismatches
+    for(let i=n;i<b.length;i++) out.push(b[i]);
+    return out;
+  }
+
+
+  // ============ TOP 3: MAHKOTA + LABEL RANKING + PAPAN DI TEPI ARENA ============
+  // Peringkat diambil dari HALL OF FAME (rekor sepanjang masa, lastHofSnapshot) — 5 teratas.
+  // Pemilik rekor dikenali lewat id pemain; mahkotanya muncul di ular mereka kapan pun mereka main.
+  const RANK_STYLES = [
+    { label:'RANKING 1', hex:0xffd54a, css:'#ffd54a', dark:'#9a6b00' },
+    { label:'RANKING 2', hex:0xdfe6ee, css:'#dfe6ee', dark:'#6d7886' },
+    { label:'RANKING 3', hex:0xe08a4a, css:'#e08a4a', dark:'#7a3d12' },
+    { label:'RANKING 4', hex:0x6fd8ff, css:'#6fd8ff', dark:'#1f6f90' },
+    { label:'RANKING 5', hex:0x8ea3ff, css:'#8ea3ff', dark:'#47548f' }
+  ];
+  const RANK_COUNT = 5;
+  const VIP_PROMO_TEXT = 'Ranking 1-3 dapat SCRIPT VIP GRATIS';
+  let liveTop3 = [];          // [{id, name, score, color}]
+  let liveRankById = Object.create(null);      // id ('self' / pid) -> 0..2
+  let lastTop3Key = '';
+
+  function computeLiveRanks(){
+    const hof = lastHofSnapshot || [];
+    liveTop3 = hof.filter(e => e && Number(e.score) > 0).slice(0, RANK_COUNT).map(e => ({
+      id: e.id, name: e.name || 'Ular', score: Number(e.score) || 0, color: (e.color && e.color.hex) || '#ffffff'
+    }));
+    liveRankById = Object.create(null);
+    liveTop3.forEach((r,i) => {
+      if(!String(r.id).startsWith('legacy')){
+        if(myId && r.id === myId) liveRankById['self'] = i; else liveRankById[r.id] = i;
+      } else {
+        // data format lama gak punya id pemain asli — cocokkan lewat nama
+        if(alive && myName === r.name) liveRankById['self'] = i;
+        for(const pid in others){ if(others[pid] && others[pid].name === r.name) liveRankById[pid] = i; }
+      }
+    });
+    const key = liveTop3.map(r => r.id + ':' + r.name + ':' + r.score).join('|');
+    if(key !== lastTop3Key){
+      lastTop3Key = key;
+      drawTop3Board();
+    }
+  }
+
+  // ---- mahkota 3D (geometri dipakai bersama, material per ular) ----
+  const crownBandGeo = new THREE.CylinderGeometry(0.34, 0.28, 0.2, 16);
+  const crownSpikeGeo = new THREE.ConeGeometry(0.085, 0.3, 8);
+  const crownGemGeo = new THREE.SphereGeometry(0.06, 8, 8);
+  function createCrownMesh(hex){
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color:hex, metalness:0.75, roughness:0.28, emissive:hex, emissiveIntensity:0.35 });
+    const band = new THREE.Mesh(crownBandGeo, mat);
+    g.add(band);
+    for(let i=0;i<5;i++){
+      const a = (i/5) * Math.PI * 2;
+      const spike = new THREE.Mesh(crownSpikeGeo, mat);
+      spike.position.set(Math.cos(a)*0.27, 0.24, Math.sin(a)*0.27);
+      g.add(spike);
+      const gem = new THREE.Mesh(crownGemGeo, mat);
+      gem.position.set(Math.cos(a)*0.27, 0.42, Math.sin(a)*0.27);
+      g.add(gem);
+    }
+    g.scale.setScalar(1.15);
+    return { group:g, mat };
+  }
+
+  // ---- label "RANKING n" (texture dibagi ke semua ular, 3 saja) ----
+  const rankLabelTex = [];
+  function getRankLabel(rank){
+    if(rankLabelTex[rank]) return rankLabelTex[rank];
+    const st = RANK_STYLES[rank];
+    const c = document.createElement('canvas');
+    c.width = 300; c.height = 64;
+    const g = c.getContext('2d');
+    g.fillStyle = 'rgba(10,14,23,0.78)';
+    g.beginPath();
+    if(g.roundRect) g.roundRect(2,2,c.width-4,c.height-4,16); else g.rect(2,2,c.width-4,c.height-4);
+    g.fill();
+    g.lineWidth = 4; g.strokeStyle = st.css; g.stroke();
+    g.font = "700 36px 'Space Grotesk', sans-serif";
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = st.css;
+    g.fillText(st.label, c.width/2, c.height/2 + 2);
+    const tex = new THREE.CanvasTexture(c);
+    tex.needsUpdate = true;
+    return rankLabelTex[rank] = { tex, aspect: c.width / c.height };
+  }
+
+  // ---- papan Top 3 di keempat tepi arena (1 texture dipakai bersama) ----
+  const TOP3_W = 1024, TOP3_H = 576;
+  const top3Canvas = document.createElement('canvas');
+  top3Canvas.width = TOP3_W; top3Canvas.height = TOP3_H;
+  const top3Ctx = top3Canvas.getContext('2d');
+  const top3Tex = new THREE.CanvasTexture(top3Canvas);
+  top3Tex.anisotropy = 4;
+
+  function drawCrownIcon(g, cx, cy, s, fill, edge){
+    g.beginPath();
+    g.moveTo(cx - s, cy + s*0.55);
+    g.lineTo(cx - s, cy - s*0.35);
+    g.lineTo(cx - s*0.5, cy + s*0.1);
+    g.lineTo(cx, cy - s*0.75);
+    g.lineTo(cx + s*0.5, cy + s*0.1);
+    g.lineTo(cx + s, cy - s*0.35);
+    g.lineTo(cx + s, cy + s*0.55);
+    g.closePath();
+    g.fillStyle = fill; g.fill();
+    g.lineWidth = 4; g.strokeStyle = edge; g.stroke();
+  }
+  function fitText(g, text, maxW){
+    let t = String(text || '');
+    if(g.measureText(t).width <= maxW) return t;
+    while(t.length > 1 && g.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t + '…';
+  }
+
+  function drawTop3Board(){
+    const g = top3Ctx;
+    const bg = g.createLinearGradient(0,0,0,TOP3_H);
+    bg.addColorStop(0,'#101a29'); bg.addColorStop(1,'#05080e');
+    g.fillStyle = bg; g.fillRect(0,0,TOP3_W,TOP3_H);
+    g.lineWidth = 10; g.strokeStyle = '#6fd8ff';
+    g.strokeRect(5,5,TOP3_W-10,TOP3_H-10);
+
+    g.textBaseline = 'middle';
+    g.textAlign = 'center';
+    g.fillStyle = '#eef6ff';
+    g.font = "700 52px 'Space Grotesk', sans-serif";
+    g.fillText('TOP 5 SEPANJANG MASA', TOP3_W/2, 50);
+
+    for(let i=0;i<RANK_COUNT;i++){
+      const st = RANK_STYLES[i];
+      const y = 120 + i*74;
+      const r = liveTop3[i];
+      g.fillStyle = r ? 'rgba(111,216,255,0.10)' : 'rgba(111,216,255,0.04)';
+      g.fillRect(40, y-31, TOP3_W-80, 62);
+      drawCrownIcon(g, 104, y, 26, r ? st.css : '#2a3446', r ? st.dark : '#1a2230');
+      g.textAlign = 'left';
+      g.font = "700 44px 'Space Grotesk', sans-serif";
+      g.fillStyle = r ? st.css : '#47548f';
+      g.fillText(String(i+1), 156, y+2);
+      g.font = "700 42px 'Space Grotesk', sans-serif";
+      g.fillStyle = r ? r.color : '#47548f';
+      g.fillText(r ? fitText(g, r.name, 470) : 'belum ada', 214, y+2);
+      g.textAlign = 'right';
+      g.font = "600 38px 'JetBrains Mono', monospace";
+      g.fillStyle = r ? '#ffce6b' : '#47548f';
+      g.fillText(r ? formatScoreDisplay(r.score) : '-', TOP3_W-70, y+2);
+    }
+
+    g.fillStyle = 'rgba(255,206,107,0.14)';
+    g.fillRect(40, 494, TOP3_W-80, 60);
+    g.lineWidth = 4; g.strokeStyle = '#ffce6b';
+    g.strokeRect(40, 494, TOP3_W-80, 60);
+    g.textAlign = 'center';
+    g.font = "700 36px 'Space Grotesk', sans-serif";
+    g.fillStyle = '#ffce6b';
+    g.fillText(VIP_PROMO_TEXT, TOP3_W/2, 526);
+    top3Tex.needsUpdate = true;
+  }
+  drawTop3Board();
+  // font web bisa telat kebaca — gambar ulang begitu siap
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(() => { drawTop3Board(); }); }
+
+  (function buildTop3Boards(){
+    const BW = 18, BH = BW * TOP3_H / TOP3_W;   // 18 x 10.125
+    const halfW = COLS/2, halfH = ROWS/2, gap = 1.6, cy = 1.5 + BH/2;
+    const frameMat = new THREE.MeshBasicMaterial({ color:0x2f6f90, fog:false });
+    const postMat = new THREE.MeshStandardMaterial({ color:0x1b2638, roughness:0.8 });
+    const faceMat = new THREE.MeshBasicMaterial({ map:top3Tex, fog:false });
+    const sides = [
+      { x:0, z:-halfH - gap, ry:0 },
+      { x:0, z: halfH + gap, ry:Math.PI },
+      { x:-halfW - gap, z:0, ry: Math.PI/2 },
+      { x: halfW + gap, z:0, ry:-Math.PI/2 }
+    ];
+    sides.forEach(sd => {
+      const grp = new THREE.Group();
+      grp.position.set(sd.x, 0, sd.z);
+      grp.rotation.y = sd.ry;
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(BW+0.7, BH+0.7, 0.2), frameMat);
+      frame.position.set(0, cy, -0.12);
+      grp.add(frame);
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), faceMat);
+      face.position.set(0, cy, 0);
+      grp.add(face);
+      [-BW*0.35, BW*0.35].forEach(px => {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.6, 0.3), postMat);
+        post.position.set(px, 0.8, -0.12);
+        grp.add(post);
+      });
+      scene.add(grp);
+    });
+  })();
+
+  function updateSnakeMeshes(id, segs, colorHex, headEmoji, displayName, chatMsg, chatTs, headingAngle, killMsg, killTs, killCount){
+    let pool = playerMeshes[id];
+    if(!pool){
+      const trailLine = createTrailLine(colorHex);
+      // garis jejak di lantai TIDAK ditambahkan ke scene lagi — user minta
+      // garis yang menghubungkan antar bola badan dihilangkan. Objeknya tetap
+      // dibuat & disimpan di `pool` (kode lain masih mereferensikan
+      // .geometry/.material buat update & dispose) tapi gak pernah kelihatan.
+      const bodyMesh = createBodyMesh(colorHex);
+      scene.add(bodyMesh);
+      const headMesh = create3DPensiveFace();
+      scene.add(headMesh);
+      const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent:true, depthWrite:false }));
+      scene.add(nameSprite);
+      const chatSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent:true, depthWrite:false }));
+      chatSprite.visible = false;
+      scene.add(chatSprite);
+      const killSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent:true, depthWrite:false }));
+      killSprite.visible = false;
+      scene.add(killSprite);
+      const rankSprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent:true, depthWrite:false }));
+      rankSprite.visible = false;
+      scene.add(rankSprite);
+      pool = playerMeshes[id] = { crown:null, crownMat:null, crownRank:-1, rankSprite, trailLine, bodyMesh, colorHex, headMesh, headKind: 'normal', nameSprite, chatSprite, killSprite, headEmoji: null, name: null, chatMsg: null, killMsg: null, facingAngle: Math.PI/2 };
+    } else if(pool.colorHex !== colorHex){
+      pool.trailLine.material.color.set(colorHex);
+      pool.bodyMesh.material.color.set(colorHex);
+      pool.colorHex = colorHex;
+    }
+
+    // kill > 5 di hidup ini -> kepala otomatis jadi babi, buat semua pemain lihat
+    const wantHeadKind = (killCount || 0) > 5 ? 'pig' : 'normal';
+    if(pool.headKind !== wantHeadKind){
+      scene.remove(pool.headMesh);
+      disposeHeadMesh(pool.headMesh);
+      pool.headMesh = wantHeadKind === 'pig' ? create3DPigFace() : create3DPensiveFace();
+      scene.add(pool.headMesh);
+      pool.headKind = wantHeadKind;
+    }
+
+    if(pool.headEmoji !== headEmoji){
+      pool.headEmoji = headEmoji;
+    }
+    if(pool.name !== displayName){
+      if(pool.nameSprite.material.map) pool.nameSprite.material.map.dispose();
+      const { tex, aspect } = makeNameTexture(displayName, colorHex);
+      pool.nameSprite.material.map = tex;
+      pool.nameSprite.material.needsUpdate = true;
+      pool.nameSprite.scale.set(0.6*aspect, 0.6, 1);
+      pool.name = displayName;
+    }
+
+    const chatActive = !!chatMsg && (Date.now() - chatTs) < CHAT_DURATION_MS;
+    if(chatActive && pool.chatMsg !== chatMsg){
+      if(pool.chatSprite.material.map) pool.chatSprite.material.map.dispose();
+      const { tex, aspect } = makeChatTexture(chatMsg, colorHex);
+      pool.chatSprite.material.map = tex;
+      pool.chatSprite.material.needsUpdate = true;
+      pool.chatSprite.scale.set(0.8*aspect, 0.8, 1);
+      pool.chatMsg = chatMsg;
+    } else if(!chatActive){
+      pool.chatMsg = null;
+    }
+
+    // badge kill dibuat PERMANEN selama masih hidup (gak ada batas waktu kayak
+    // chat bubble) — biar pemain lain bisa lihat terus berapa kill yang sudah
+    // didapat di hidup ini, bukan cuma sekilas lewat
+    const killActive = !!killMsg;
+    if(killActive && pool.killMsg !== killMsg){
+      if(pool.killSprite.material.map) pool.killSprite.material.map.dispose();
+      const { tex, aspect } = makeKillTexture(killMsg);
+      pool.killSprite.material.map = tex;
+      pool.killSprite.material.needsUpdate = true;
+      pool.killSprite.scale.set(0.55*aspect, 0.55, 1);
+      pool.killMsg = killMsg;
+    } else if(!killActive){
+      pool.killMsg = null;
+    }
+
+    // tail line udah gak dipakai/gak masuk scene (lihat komentar di atas saat
+    // pool dibuat) — skip itung ulang buffer-nya tiap frame biar gak
+    // buang-buang kerja CPU percuma buat sesuatu yang gak dirender.
+
+    updateBodyMesh(pool.bodyMesh, segs, BODY_INSTANCE_CAP);
+
+    if(segs.length > 0){
+      const s = segs[0];
+      const w = cellToWorld(s.x, s.y);
+      const headY = HEAD_R + 0.2;
+      pool.headMesh.position.set(w.x, headY, w.z);
+      pool.headMesh.visible = true;
+      // face the direction of travel (model's default facing = +z, i.e. angle = PI/2)
+      const heading = headingAngle !== null && headingAngle !== undefined
+        ? headingAngle
+        : (computeHeadingFromSegs(segs) ?? pool.facingAngle);
+      pool.facingAngle = heading;
+      pool.headMesh.rotation.y = Math.PI/2 - heading;
+      const rank = liveRankById[id];            // 0..2 kalau masuk Top 3, selain itu undefined
+      const isRanked = rank !== undefined;
+      const nameY = headY + 0.8 + 0.3 + 0.06 + (isRanked ? 0.62 : 0); // + ruang buat mahkota
+      if(isRanked){
+        if(pool.crownRank !== rank){
+          if(pool.crown){ scene.remove(pool.crown); pool.crownMat.dispose(); }
+          const c = createCrownMesh(RANK_STYLES[rank].hex);
+          pool.crown = c.group; pool.crownMat = c.mat; pool.crownRank = rank;
+          scene.add(pool.crown);
+          const lbl = getRankLabel(rank);
+          pool.rankSprite.material.map = lbl.tex;
+          pool.rankSprite.material.needsUpdate = true;
+          pool.rankSprite.scale.set(0.42*lbl.aspect, 0.42, 1);
+        }
+        const tt = Date.now();
+        pool.crown.visible = true;
+        pool.crown.position.set(w.x, headY + 0.84 + Math.sin(tt*0.004)*0.04, w.z);
+        pool.crown.rotation.y = tt * 0.0025;
+      } else {
+        if(pool.crown) pool.crown.visible = false;
+        pool.rankSprite.visible = false;
+      }
+      // own name is shown in the HUD instead of floating above the head;
+      // other players still see it above our head (rendered on their client via their own updateSnakeMeshes call)
+      pool.nameSprite.position.set(w.x, nameY, w.z);
+      pool.nameSprite.visible = (id !== 'self');
+      // tumpuk ke atas: nama -> badge kill (kalau aktif) -> chat (kalau aktif),
+      // biar keduanya bisa nongol bareng tanpa numpuk/nabrak satu sama lain
+      let stackY = nameY + 0.3; // + separuh tinggi nameSprite
+      if(isRanked){
+        stackY += 0.04 + 0.21; // gap + separuh tinggi rankSprite
+        pool.rankSprite.position.set(w.x, stackY, w.z);
+        pool.rankSprite.visible = true;
+        stackY += 0.21;
+      }
+      pool.killSprite.visible = killActive;
+      if(killActive){
+        stackY += 0.06 + 0.275; // gap + separuh tinggi killSprite
+        pool.killSprite.position.set(w.x, stackY, w.z);
+        stackY += 0.275;
+      }
+      pool.chatSprite.visible = chatActive;
+      if(chatActive){
+        stackY += 0.06 + 0.4; // gap + separuh tinggi chatSprite
+        pool.chatSprite.position.set(w.x, stackY, w.z);
+      }
+    } else {
+      pool.headMesh.visible = false;
+      pool.nameSprite.visible = false;
+      pool.chatSprite.visible = false;
+      pool.killSprite.visible = false;
+      pool.rankSprite.visible = false;
+      if(pool.crown) pool.crown.visible = false;
+      pool.trailLine.visible = false;
+      pool.bodyMesh.visible = false;
+    }
+  }
+  function removeStalePlayers(activeIds){
+    for(const id in playerMeshes){
+      if(!activeIds.has(id)){
+        const pool = playerMeshes[id];
+        scene.remove(pool.trailLine);
+        pool.trailLine.geometry.dispose();
+        pool.trailLine.material.dispose();
+        scene.remove(pool.bodyMesh);
+        pool.bodyMesh.material.dispose(); // bodySphereGeo is shared across all snakes — don't dispose it here
+        scene.remove(pool.headMesh);
+        // Dispose 3D head materials
+        pool.headMesh.traverse(child => {
+          if(child.geometry) child.geometry.dispose();
+          if(child.material) {
+            if(Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+            else child.material.dispose();
+          }
+        });
+        scene.remove(pool.nameSprite);
+        if(pool.nameSprite.material.map) pool.nameSprite.material.map.dispose();
+        pool.nameSprite.material.dispose();
+        scene.remove(pool.chatSprite);
+        if(pool.chatSprite.material.map) pool.chatSprite.material.map.dispose();
+        pool.chatSprite.material.dispose();
+        scene.remove(pool.killSprite);
+        if(pool.killSprite.material.map) pool.killSprite.material.map.dispose();
+        pool.killSprite.material.dispose();
+        scene.remove(pool.rankSprite);
+        pool.rankSprite.material.dispose(); // texture label dibagi ke semua ular — jangan di-dispose di sini
+        if(pool.crown){ scene.remove(pool.crown); pool.crownMat.dispose(); } // geometri mahkota dibagi bersama
+        delete playerMeshes[id];
+      }
+    }
+  }
+
+  const foodGeo = new THREE.IcosahedronGeometry(FOOD_R*0.9, 0);
+  const foodMat = new THREE.MeshStandardMaterial({ color:0xd9bd7d, emissive:0xd9bd7d, emissiveIntensity:0.4, roughness:0.4 });
+  let foodMeshes = [];
+  function updateFoodMeshes(){
+    while(foodMeshes.length < foodList.length){
+      const m = new THREE.Mesh(foodGeo, foodMat);
+      scene.add(m);
+      foodMeshes.push(m);
+    }
+    const t = performance.now()*0.001;
+    for(let i=0;i<foodList.length;i++){
+      const f = foodList[i];
+      if(!f) continue;
+      const w = cellToWorld(f.x, f.y);
+      const mesh = foodMeshes[i];
+      mesh.position.set(w.x, 0.35 + Math.sin(t*2+i)*0.08, w.z);
+      mesh.rotation.set(t*0.8, t*1.5+i, 0);
+    }
+  }
+
+  function updateCamera(dt){
+    const w = cellToWorld(head.x, head.y);
+    const d = (dt || 1/60);
+    // kamera ngejar arah ular (angle) secara halus lewat camAngle — inilah
+    // sumber "delay"-nya. Alpha lebih kecil dari lerp posisi (0.14) biar
+    // efek delay-nya kerasa, tapi masih cukup cepat biar kamera gak
+    // ketinggalan jauh pas belokan panjang/terus-menerus.
+    let da = normalizeAngle(angle - camAngle);
+    const camAngleAlpha = 1 - Math.pow(1 - 0.08, d * 60);
+    camAngle = normalizeAngle(camAngle + da*camAngleAlpha);
+    const fx = Math.cos(camAngle), fz = Math.sin(camAngle);
+    const dist = CAM_DIST + camDistExtra;
+    const desired = new THREE.Vector3(w.x - fx*dist, CAM_HEIGHT, w.z - fz*dist);
+    // lerp factor dihitung dari dt (bukan angka tetap) — biar gerakan kamera
+    // tetap mulus walau frame time naik-turun (mis. gara-gara render lebih
+    // berat di portrait/FOV lebar). 0.14 tetap jadi acuan di ~60fps.
+    const camLerpAlpha = 1 - Math.pow(1 - 0.24, d * 60);
+    camera.position.lerp(desired, camLerpAlpha);
+    camera.lookAt(w.x + fx*camLookAhead, 0.6, w.z + fz*camLookAhead);
+    if (camExtraTilt) camera.rotateX(-camExtraTilt); // tilt further down on tall/portrait screens so the extra fov reveals more floor, not empty sky
+    headLight.position.set(w.x, 1.2, w.z);
+  }
+
+  function resizeCanvas(){
+    const wrap = $('gameWrap');
+    const w = Math.max(280, Math.floor(wrap.clientWidth - 20));
+    const h = Math.max(180, Math.floor(wrap.clientHeight - 20));
+    const aspect = w/h;
+    camLookAhead = aspect < BASE_ASPECT ? 4.8 : CAM_LOOK_AHEAD;
+    // portrait (aspect < BASE_ASPECT) udah lebih berat karena FOV melebar (lihat
+    // di bawah) — kompensasi dengan render resolution lebih rendah biar GPU HP
+    // gak keteteran, terutama pas kamera muter (belok) di mana draw call spike.
+    const pr = aspect < BASE_ASPECT
+      ? Math.min(window.devicePixelRatio || 1, 1.5)
+      : Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(pr);
+    renderer.setSize(w, h, true);
+    camera.aspect = aspect;
+    // keep the HORIZONTAL field of view roughly constant across aspect ratios.
+    // three.js's fov is vertical, so on tall/narrow (portrait) screens the
+    // horizontal fov shrinks a lot if we leave fov fixed — that's what reads
+    // as "zoomed in". Widen the vertical fov to compensate when aspect < base.
+    if (aspect < BASE_ASPECT){
+      const baseVFovRad = BASE_FOV * Math.PI/180;
+      const hFovRad = 2*Math.atan(Math.tan(baseVFovRad/2)*BASE_ASPECT);
+      const vFovRad = 2*Math.atan(Math.tan(hFovRad/2)/aspect);
+      const cappedVFovRad = Math.min(vFovRad, 88*Math.PI/180); // cap lebih rendah dari sebelumnya (100°) — FOV terlalu lebar bikin scene yang dirender (termasuk fog sampai jarak jauh) makin luas, berat di GPU HP, dan itu penyebab utama frame time gak stabil / "geter" di portrait
+      camera.fov = cappedVFovRad*180/Math.PI;
+      // extra vertical fov dibagi dua cara: sebagian jadi kamera mundur (lebih
+      // natural, mengurangi distorsi/badan ular yang kelihatan kepanjangan),
+      // sebagian jadi tilt nunduk (biar gak nampilin langit kosong)
+      const extraFov = Math.max(0, cappedVFovRad - baseVFovRad);
+      camDistExtra = extraFov * 2.6; // makin lebar FOV portrait, kamera makin mundur
+      camExtraTilt = extraFov/2 * 0.18; // diturunin dari 0.35 — biar dinding arena lebih kelihatan tinggi, gak melulu lantai yang ke-expose
+    } else {
+      camera.fov = BASE_FOV;
+      camExtraTilt = 0;
+      camDistExtra = 0;
+    }
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  // ============ TOMBOL MUTE (🔊/🔇) ============
+  // Menggantikan head-picker lama (cuma ada 1 pilihan kepala, jadi gak
+  // berguna sebagai UI pilihan) dengan toggle nyala/mati suara.
+  // Preferensinya disimpan lewat window.storage biar keinget lagi
+  // walau ganti sesi (lihat loadSavedProfile/saveProfile di bawah).
+  let soundMuted = false;
+  const muteBtn = $('muteBtn');
+  function applyMuteUi(){
+    if(!muteBtn) return;
+    muteBtn.textContent = soundMuted ? '🔇' : '🔊';
+    muteBtn.classList.toggle('muted', soundMuted);
+  }
+  if(muteBtn){
+    muteBtn.addEventListener('click', () => {
+      soundMuted = !soundMuted;
+      applyMuteUi();
+      try{ window.storage.set('profile-muted', soundMuted ? '1' : '0', false); }catch(e){}
+    });
+  }
+
+  // ============ COLOR PICKER (free hue slider) ============
+  const hueSlider = $('hueSlider');
+  const colorPreview = $('colorPreview');
+  function setColorFromHue(h){
+    const hex = hslToHex(h, HUE_S, HUE_L);
+    myColor = { n:'custom', hex };
+    colorPreview.style.background = hex;
+  }
+  hueSlider.addEventListener('input', () => setColorFromHue(Number(hueSlider.value)));
+  setColorFromHue(Number(hueSlider.value));
+
+  // ============ HELPERS ============
+  function randId(){ return 'p' + Math.random().toString(36).slice(2,10); }
+
+  // format skor buat ditampilin — poin (naik +5 tiap makan) ditampilin sebagai
+  // "meter", dan di atas 1000 otomatis jadi "km" (1000 -> "1km", 1250 -> "1.3km")
+  // biar keliatan lebih gede/keren, murni kosmetik, gak ngaruh ke gameplay.
+  function formatScoreDisplay(v){
+    if(v >= 1000){
+      const km = v / 1000;
+      const rounded = Math.round(km * 10) / 10;
+      return (Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)) + 'km';
+    }
+    return v + 'm';
+  }
+  function randCell(){ return { x: Math.random()*COLS, y: Math.random()*ROWS }; }
+  function wrapDelta(d, size){ if(d > size/2) d -= size; else if(d < -size/2) d += size; return d; }
+
+  // dipakai waktu pemain pencet "Lanjutkan" abis dijeda — cari titik yang
+  // jauh dari tembok DAN jauh dari badan ular pemain lain, biar begitu
+  // muncul lagi gak langsung nabrak/mengganggu siapa pun. Nyoba beberapa
+  // titik acak, ambil yang paling aman kalau nggak ada yang benar-benar lolos.
+  function findSafeSpawnPoint(){
+    const MARGIN = 3, MIN_CLEAR = 3.5;
+    let best = null, bestDist = -1;
+    for(let attempt=0; attempt<20; attempt++){
+      const cand = { x: MARGIN + Math.random()*(COLS-MARGIN*2), y: MARGIN + Math.random()*(ROWS-MARGIN*2) };
+      let minDistHere = Infinity;
+      for(const pid in others){
+        const segs = others[pid].body;
+        if(!segs) continue;
+        for(const s of segs){
+          const dx = wrapDelta(cand.x-s.x, COLS), dy = wrapDelta(cand.y-s.y, ROWS);
+          const d = Math.hypot(dx,dy);
+          if(d < minDistHere) minDistHere = d;
+        }
+      }
+      if(minDistHere >= MIN_CLEAR) return cand;
+      if(minDistHere > bestDist){ bestDist = minDistHere; best = cand; }
+    }
+    return best || { x: MARGIN + Math.random()*(COLS-MARGIN*2), y: MARGIN + Math.random()*(ROWS-MARGIN*2) };
+  }
+  function normalizeAngle(a){ while(a > Math.PI) a -= Math.PI*2; while(a < -Math.PI) a += Math.PI*2; return a; }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ============ FIREBASE REST LAYER ============
+  function setConn(state){
+    const dot = $('connDot'), st = $('connStatus');
+    if(state === 'ok'){ dot.classList.remove('off'); st.textContent = 'tersambung'; st.className='ok'; }
+    else if(state === 'err'){ dot.classList.add('off'); st.textContent = 'gagal konek'; st.className='err'; }
+    else { st.textContent = 'menghubungkan…'; st.className=''; }
+  }
+
+  async function fbGet(path){
+    try{
+      const r = await fetch(`${FB_BASE}/${ROOM}/${path}.json`, { cache: 'no-store' });
+      if(!r.ok) { setConn('err'); return null; }
+      setConn('ok');
+      return await r.json();
+    }catch(e){ setConn('err'); return null; }
+  }
+  async function fbPost(path, value){
+    try{
+      const r = await fetch(`${FB_BASE}/${ROOM}/${path}.json`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(value)
+      });
+      if(!r.ok){ setConn('err'); return false; }
+      setConn('ok');
+      return true;
+    }catch(e){ setConn('err'); return false; }
+  }
+  async function fbPut(path, value){
+    try{
+      const r = await fetch(`${FB_BASE}/${ROOM}/${path}.json`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(value)
+      });
+      if(!r.ok){ setConn('err'); return false; }
+      setConn('ok');
+      return true;
+    }catch(e){ setConn('err'); return false; }
+  }
+  async function fbDelete(path){
+    try{
+      const r = await fetch(`${FB_BASE}/${ROOM}/${path}.json`, { method: 'DELETE' });
+      if(!r.ok){ setConn('err'); return false; }
+      setConn('ok');
+      return true;
+    }catch(e){ setConn('err'); return false; }
+  }
+
+  // ============ FIREBASE STREAMING (SSE) — near-instant sync ============
+  let rawPlayers = {};   // id -> latest player payload (all players, incl. stale/unconfirmed)
+  let lastSeenAt = {};   // id -> LOCAL clock time we last got PROOF this player is actually
+                          // still alive (a per-player put/patch event). Never set from a full
+                          // snapshot — see applyPlayerEvent below for why.
+                          // (never compares clocks across devices — avoids false "offline"
+                          // from phones whose clocks aren't perfectly in sync)
+  let firstSeenAt = {};  // id -> LOCAL clock time we first noticed this pid exist at all,
+                          // used so an entry that's never confirmed alive still gets GC'd
+                          // instead of sitting unconfirmed (and invisible, but un-deleted) forever
+  let rawFood = [];
+  let playersEs = null, foodEs = null;
+
+  // Terpenuhi begitu snapshot PENUH pertama dari players/ sudah sampai lewat
+  // SSE (event 'put' dengan path root, lihat applyPlayerEvent) — bukan cuma
+  // "koneksi kebuka", tapi datanya beneran udah ketarik. Dipakai startGame()
+  // supaya layar arena baru muncul SETELAH kita tahu persis siapa saja yang
+  // sudah ada di room, bukan pas masih nebak/kosong.
+  let initialPlayersSynced = false;
+  function waitForInitialPlayerSync(timeoutMs = 4000){
+    if(initialPlayersSynced) return Promise.resolve();
+    return new Promise(resolve => {
+      const start = Date.now();
+      const iv = setInterval(() => {
+        if(initialPlayersSynced || (Date.now() - start) > timeoutMs){
+          clearInterval(iv);
+          resolve(); // timeout = tetap lanjut (mis. koneksi lemot/gagal) drpd macet selamanya di layar join
+        }
+      }, 50);
+    });
+  }
+
+  function connectPlayerStream(){
+    if(playersEs) playersEs.close();
+    playersEs = new EventSource(`${FB_BASE}/${ROOM}/players.json`);
+    playersEs.addEventListener('put', e => applyPlayerEvent(e));
+    playersEs.addEventListener('patch', e => applyPlayerEvent(e));
+    playersEs.onopen = () => setConn('ok');
+    playersEs.onerror = () => setConn('err');
+  }
+  function applyPlayerEvent(e){
+    let d;
+    try{ d = JSON.parse(e.data); }catch(err){ return; }
+    const path = (d.path || '/').split('/').filter(Boolean);
+    const now = Date.now();
+    if(path.length === 0){
+      const newPlayers = d.data || {};
+      // BUGFIX v2: snapshot penuh ini dikirim Firebase SETIAP KALI koneksi SSE
+      // (re)connect — bukan cuma sekali di awal. Itu kejadian terus-terusan di
+      // HP: app pindah ke background/foreground (lihat visibilitychange di
+      // bawah, yang sengaja paksa reconnect), atau sinyal putus-nyambung.
+      // Dulu (v1) kita coba akalin ini dengan membandingkan ke rawPlayers lokal
+      // — tapi itu rapuh: begitu ada SATU momen data lokal kita nggak sinkron
+      // dengan Firebase (delete gagal terkirim, race antar tab, atau memang
+      // baru pertama kali connect sehingga rawPlayers masih kosong), pemain
+      // basi/ghost langsung keanggep "berubah" dan lastSeenAt-nya di-reset ke
+      // sekarang — ghost itu nongol lagi di layar sebagai snake yang diam/
+      // delay, dan itu SESUAI keluhan: "kadang gak sinkron, tapi hapus data
+      // firebase jadi normal" (menghapus data = menghapus semua ghost-nya).
+      //
+      // Fix-nya: snapshot penuh SAMA SEKALI TIDAK dipakai sebagai bukti hidup.
+      // Cuma dipakai untuk tahu pid apa saja yang ada. Yang jadi bukti hidup
+      // HANYA event put/patch per-pemain di bawah (else-branch) — itu baru
+      // benar-benar datang dari pemain yang masih aktif publish tiap 130ms.
+      // Ghost (yang datanya di Firebase gak pernah lagi berubah) jadi TIDAK
+      // PERNAH dapat lastSeenAt dari jalur ini, jadi gak akan pernah dianggap
+      // "fresh" hanya gara-gara ikut kebawa snapshot pas reconnect.
+      for(const pid in newPlayers){
+        if(!firstSeenAt[pid]) firstSeenAt[pid] = now;
+      }
+      rawPlayers = newPlayers;
+      initialPlayersSynced = true; // snapshot root pertama sudah sampai -> daftar pemain awal siap dipakai
+    } else {
+      const pid = path[0];
+      if(path.length === 2 && path[1] === 'crashAt' && d.data){
+        // event khusus: bukan bagian dari state pemain yang dirender (posisi/
+        // warna/dll — itu semua masih lewat path.length===1 di bawah), cuma
+        // "ping" sekali pakai buat nyuruh SEMUA klien lain mainin suara
+        // tabrakan si pid ini. Ditulis ke sub-field terpisah lalu node
+        // pemainnya langsung dihapus abis itu (lihat die()) jadi otomatis
+        // "bersih sendiri", gak perlu GC tambahan buat event ini.
+        handleRemoteCrash(pid, d.data);
+      } else if(d.data === null){ delete rawPlayers[pid]; delete lastSeenAt[pid]; delete firstSeenAt[pid]; }
+      else if(path.length === 1){
+        rawPlayers[pid] = d.data;
+        lastSeenAt[pid] = now; // <-- satu-satunya tempat yang boleh menandai "beneran hidup"
+        if(!firstSeenAt[pid]) firstSeenAt[pid] = now;
+      }
+    }
+    recomputeOthers();
+  }
+
+  // Jarak (dalam satuan grid, sama seperti dipakai buat deteksi tabrakan)
+  // yang di luar itu suara tabrakan pemain lain udah gak kedengeran sama
+  // sekali. Di dalam radius ini volumenya berkurang linear sesuai jarak.
+  const MAX_HEAR_DIST = 40;
+
+  // ---- Notif "NAMA meninggoy" ----
+  // Muncul di bawah baris "Panjang" tiap kali ada pemain LAIN yang nabrak,
+  // lalu otomatis menghilang lagi setelah beberapa detik.
+  const CRASH_NOTIF_VISIBLE_MS = 3200;
+  function showCrashNotif(name){
+    const container = $('crashNotifs');
+    if(!container) return;
+    const el = document.createElement('div');
+    el.className = 'crashNotif';
+    el.innerHTML = `<b>${escapeHtml(name)}</b> meninggoy`;
+    container.appendChild(el);
+    // dua requestAnimationFrame biar transisi CSS (opacity/transform) beneran
+    // kepicu, bukan langsung loncat ke state akhir tanpa animasi masuk
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 300);
+    }, CRASH_NOTIF_VISIBLE_MS);
+    // jaga-jaga biar notif gak numpuk kepanjangan kalau banyak tabrakan beruntun
+    while(container.children.length > 4) container.removeChild(container.firstChild);
+  }
+
+  function handleRemoteCrash(pid, data){
+    if(pid === myId) return; // tabrakan sendiri udah ada suaranya sendiri (crott.mp3)
+    if(!alive || !head) return; // gak ada posisi kita yang valid buat dihitung jaraknya
+    if(typeof data.x !== 'number' || typeof data.y !== 'number') return;
+    const crasherName = (rawPlayers[pid] && rawPlayers[pid].name) || (others[pid] && others[pid].name) || 'Ular';
+    showCrashNotif(crasherName);
+    const dx = wrapDelta(head.x - data.x, COLS), dy = wrapDelta(head.y - data.y, ROWS);
+    const dist = Math.hypot(dx, dy);
+    if(dist >= MAX_HEAR_DIST) return;
+    const volume = Math.pow(1 - dist / MAX_HEAR_DIST, 1.6); // makin dekat, makin cepat naik ke keras
+    if(volume < 0.03) return;
+    playRemoteCrashSound(volume);
+  }
+
+  function connectFoodStream(){
+    if(foodEs) foodEs.close();
+    foodEs = new EventSource(`${FB_BASE}/${ROOM}/food.json`);
+    foodEs.addEventListener('put', e => applyFoodEvent(e));
+    foodEs.addEventListener('patch', e => applyFoodEvent(e));
+    foodEs.onerror = () => setConn('err');
+  }
+  function applyFoodEvent(e){
+    let d;
+    try{ d = JSON.parse(e.data); }catch(err){ return; }
+    const path = d.path || '/';
+    if(path === '/'){
+      if(Array.isArray(d.data)){
+        rawFood = d.data;
+        foodList = rawFood;
+      }
+      return;
+    }
+    // targeted single-slot update (e.g. path "/12" from another player eating
+    // that food) — patch just that index instead of waiting for a full array
+    const parts = path.split('/').filter(Boolean);
+    if(parts.length === 1){
+      const idx = parseInt(parts[0], 10);
+      if(!Number.isNaN(idx)){
+        rawFood[idx] = d.data;
+        foodList[idx] = d.data;
+      }
+    }
+  }
+
+  // ============ REBUT SKOR (kill -> transfer skor korban ke pembunuh) ============
+  // Ini bukan skor dari server otoritatif — tiap klien cuma tahu skornya sendiri.
+  // Kalau korban langsung nulis ke players/{killerId}/score, itu bakal ke-timpa
+  // lagi sama publishSelf() milik si pembunuh yg jalan tiap 130ms (dia nulis
+  // ULANG seluruh object player-nya, termasuk field score versi lokalnya yg
+  // belum tahu apa-apa soal loot itu). Makanya loot ditulis ke node TERPISAH
+  // (loot/{killerId}/{key}, satu entri unik per kill — bukan nimpa satu field
+  // bareng) yang cuma dibaca+dihabisin sendiri sama si pembunuh lewat stream
+  // di bawah, baru abis itu dia nambahin ke skor lokalnya & publish ulang.
+  function awardKillScoreTo(killerId, amount){
+    if(!killerId || !amount || amount <= 0) return;
+    const key = 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+    fbPut(`loot/${killerId}/${key}`, amount);
+  }
+
+  let lootEs = null;
+  function connectLootStream(){
+    if(!myId) return;
+    if(lootEs) lootEs.close();
+    lootEs = new EventSource(`${FB_BASE}/${ROOM}/loot/${myId}.json`);
+    lootEs.addEventListener('put', e => applyLootEvent(e));
+    lootEs.addEventListener('patch', e => applyLootEvent(e));
+    lootEs.onerror = () => setConn('err');
+  }
+  function applyLootEvent(e){
+    let d;
+    try{ d = JSON.parse(e.data); }catch(err){ return; }
+    const path = d.path || '/';
+    if(path === '/'){
+      // snapshot penuh node loot kita — bisa berisi lebih dari satu entri kalau
+      // pas kita gak lagi connect (background/reconnect) ada beberapa kill
+      // numpuk. Jumlahin semua, lalu hapus SATU-SATU per key (bukan hapus
+      // seluruh node loot/{myId} sekaligus) biar entri baru yg nyelip masuk
+      // di saat bersamaan gak ikut kehapus tanpa sempat kehitung.
+      const data = d.data;
+      if(data && typeof data === 'object'){
+        let total = 0, count = 0;
+        for(const k in data){
+          total += Number(data[k]) || 0;
+          count++;
+          fbDelete(`loot/${myId}/${k}`);
+        }
+        if(total > 0) collectLoot(total, count);
+      }
+      return;
+    }
+    const parts = path.split('/').filter(Boolean);
+    if(parts.length === 1){
+      const amt = Number(d.data) || 0;
+      if(amt > 0){
+        collectLoot(amt, 1);
+        fbDelete(`loot/${myId}/${parts[0]}`); // tandain sudah dipakai biar gak dobel keitung
+      }
+    }
+  }
+  function collectLoot(amount, kills){
+    // kalau lagi gak hidup (di layar join/mati) pas loot ini nyampe, abaikan —
+    // skor bakal direset ke 0 lagi begitu game baru dimulai, jadi nambahin di
+    // sini cuma bakal ilang percuma juga. Kasus ini jarang terjadi karena
+    // korban cuma bisa nabrak badan pemain yang lagi aktif & fresh (lihat
+    // `others`), jadi si pembunuh nyaris selalu masih hidup.
+    if(!alive) return;
+    score += amount;
+    myKillCount += (kills || 1);
+    myKillMsg = '☠️ kill ' + myKillCount;
+    myKillTs = Date.now();
+    $('scoreNum').textContent = formatScoreDisplay(score);
+    publishSelf();
+    maybeLiveSubmit();
+  }
+
+  function recomputeOthers(){
+    const now = Date.now();
+    const fresh = {};
+    for(const pid in rawPlayers){
+      if(pid === myId) continue;
+      const p = rawPlayers[pid];
+      const seenAt = lastSeenAt[pid];
+      if(p && p.alive && seenAt && (now - seenAt) < STALE_MS){
+        fresh[pid] = p;
+        // new network payload for this player? capture an interpolation target
+        // (whatever we're currently showing -> the new data, over NET_INTERP_MS)
+        // instead of a snapshot pair, so we don't re-teleport to the network's
+        // exact tail when the previous interpolation hadn't finished yet.
+        const st = netState[pid];
+        const newSegs = p.body || [];
+        if(!st){
+          netState[pid] = { fromSegs: newSegs, toSegs: newSegs, tStart: now, tEnd: now, lastRaw: p };
+        } else if(st.lastRaw !== p){
+          const fromSegs = newSegs.length ? interpolateOtherSegs(st, now) : newSegs;
+          netState[pid] = { fromSegs, toSegs: newSegs, tStart: now, tEnd: now + NET_INTERP_MS, lastRaw: p };
+        }
+      }
+    }
+    for(const pid in netState){ if(!fresh[pid]) delete netState[pid]; }
+    others = fresh;
+    $('liveNum').textContent = Object.keys(others).length + (alive?1:0);
+    updateBoard2();
+  }
+
+  connectPlayerStream();
+  connectFoodStream();
+  setInterval(recomputeOthers, 400); // catches stale/disconnected players even with no new events
+
+  // ============ GARBAGE COLLECTOR (players yang koneksinya putus mendadak) ============
+  // pagehide cuma nutup kasus tab ditutup/navigasi normal. Kalau koneksinya
+  // ilang kasar (crash, app di-force-close, sinyal putus) tanpa sempat kirim
+  // apa-apa, entry dia bakal nyangkut permanen di Firebase. Ambang di sini
+  // sengaja jauh lebih longgar dari STALE_MS (yang cuma buat nyembunyiin dari
+  // tampilan) — GC baru bertindak kalau beneran ditinggal, bukan cuma lag sebentar.
+  const GC_MS = 12000; // diperketat dari 20000 -> ghost lebih cepat kehapus
+  function gcStalePlayers(){
+    const now = Date.now();
+    // loop over rawPlayers (semua pid yang KITA TAHU ada), bukan cuma lastSeenAt —
+    // ghost yang belum pernah dapat lastSeenAt (lihat applyPlayerEvent) tetap harus
+    // ditendang dari Firebase, cuma acuan umurnya pakai firstSeenAt sebagai gantinya.
+    for(const pid in rawPlayers){
+      if(pid === myId) continue;
+      const staleSince = lastSeenAt[pid] || firstSeenAt[pid] || now;
+      if(now - staleSince > GC_MS){
+        delete lastSeenAt[pid];
+        delete firstSeenAt[pid];
+        delete rawPlayers[pid];
+        fbDelete('players/' + pid);
+      }
+    }
+  }
+  setInterval(gcStalePlayers, 10000);
+
+  // ============ LOBBY PREVIEW ============
+  async function refreshLobbyPreview(){
+    const now = Date.now();
+    const alivePlayers = Object.keys(rawPlayers)
+      .filter(pid => rawPlayers[pid] && rawPlayers[pid].alive && lastSeenAt[pid] && (now - lastSeenAt[pid]) < STALE_MS)
+      .map(pid => rawPlayers[pid]);
+    $('liveNum').textContent = alivePlayers.length;
+    $('playerList').innerHTML = alivePlayers.slice(0,12).map(p =>
+      `<div class="pchip"><span class="sq" style="background:${p.color.hex}"></span>${escapeHtml(p.name)}</div>`
+    ).join('');
+  }
+  refreshLobbyPreview();
+  setInterval(refreshLobbyPreview, 2000);
+
+  // ============ HALL OF FAME (persistent leaderboard, shared) ============
+  const HOF_SIZE = 10;
+
+  function renderHof(list, targetId){
+    const el = $(targetId);
+    if(!list || !list.length){
+      el.innerHTML = '<div class="hofRow"><span class="sc">belum ada juara, jadilah yang pertama</span></div>';
+      return;
+    }
+    el.innerHTML = list.slice(0, HOF_SIZE).map((p, i) =>
+      `<div class="hofRow">
+         <span class="rank">#${i+1}</span>
+         <span class="sq" style="background:${p.color?.hex || '#7CFF6B'}"></span>
+         <span class="nm">${escapeHtml(p.name)}</span>
+         <span class="sc">${formatScoreDisplay(p.score)}</span>
+       </div>`
+    ).join('');
+  }
+
+  // leaderboard disimpan sebagai MAP per-id (leaderboard/{playerId}: {...}),
+  // bukan array tunggal — supaya nulis skor 1 pemain gak perlu baca-ubah-tulis
+  // ulang seluruh papan (itu yang bikin rawan race condition/tabrakan kalau
+  // ada 2 pemain nyentuh top 10 hampir bersamaan).
+  let lastHofSnapshot = [];   // cache buat cek cepat "skor segini masuk 10 besar gak" tanpa fetch tiap saat
+  let lastLiveSubmitScore = 0;
+
+  async function refreshHof(){
+    const raw = await fbGet('leaderboard');
+    let entries; // [{id, name, color, score, ts}, ...]
+    if(Array.isArray(raw)){
+      // format lama (peninggalan sebelum diubah ke map) — tetap dibaca biar data lama gak hilang
+      entries = raw.filter(Boolean).map((v,i) => ({ id: 'legacy'+i, ...v }));
+    }else if(raw && typeof raw === 'object'){
+      entries = Object.entries(raw).filter(([,v]) => v).map(([id,v]) => ({ id, ...v }));
+    }else{
+      entries = [];
+    }
+    entries.sort((a,b) => b.score - a.score);
+
+    // beberes: kalau ada lebih dari HOF_SIZE entri (map format), hapus sisanya dari Firebase
+    // supaya papan gak numpuk terus — siapa pun client yang lagi nge-poll ini otomatis beresin.
+    if(Array.isArray(raw) === false && entries.length > HOF_SIZE){
+      for(const extra of entries.slice(HOF_SIZE)) fbDelete('leaderboard/' + extra.id);
+    }
+
+    entries = entries.slice(0, HOF_SIZE);
+    lastHofSnapshot = entries;
+    renderHof(entries, 'hofRows');
+    renderHof(entries, 'hofRowsDead');
+    return entries;
+  }
+  refreshHof();
+  setInterval(refreshHof, 4000);
+
+  function hofFloor(){
+    // skor pemain ke-10 saat ini; kalau papan belum penuh, siapa aja lolos
+    if(lastHofSnapshot.length < HOF_SIZE) return -Infinity;
+    return lastHofSnapshot[HOF_SIZE-1].score;
+  }
+
+  async function submitScore(finalScore){
+    if(!myId) return false;
+    const ok = await fbPut('leaderboard/' + myId, { name: myName, color: myColor, score: finalScore, ts: Date.now() });
+    if(ok){
+      lastLiveSubmitScore = finalScore; // baru ditandai "sudah tersimpan" kalau BENERAN berhasil
+      refreshHof();
+    }
+    return ok;
+  }
+
+  // dipanggil tiap skor nambah (checkFood) — nulis ke Firebase LANGSUNG begitu
+  // skornya lolos masuk 10 besar, bukan nunggu mati. Jadi kalau koneksi putus
+  // mendadak pas skor lagi tinggi, catatan itu udah kesimpan duluan.
+  function maybeLiveSubmit(){
+    if(!myId || !alive) return;
+    if(score <= lastLiveSubmitScore) return;
+    if(score <= hofFloor()) return;
+    submitScore(score);
+  }
+
+  // jaring pengaman: kalau submit di atas sempat gagal (mis. koneksi putus pas
+  // lagi kualifikasi top 10, atau matinya justru pas offline), coba lagi tiap
+  // beberapa detik — gak nunggu skor nambah lagi, cukup nunggu koneksi balik.
+  // myId & score tetap kepegang sampai game baru dimulai, jadi ini tetap jalan
+  // walau pemainnya udah di layar "mati".
+  setInterval(() => {
+    if(myId && score > lastLiveSubmitScore && score > hofFloor()) submitScore(score);
+  }, 5000);
+
+  // ============ REMEMBER NAME & COLOR & ID (personal, not shared) ============
+  // ID ikut disimpan sama kayak nama/warna/kepala — supaya kalau HP/browser yang
+  // sama join lagi, dia dianggap PEMAIN YANG SAMA di Firebase (bukan orang baru
+  // tiap kali start game). Ini yang bikin bedanya "user baru" vs "user yang
+  // pernah main": user baru gak punya 'profile-id' tersimpan sama sekali, jadi
+  // di-generate-in ID baru dan disimpan; user yang pernah main sudah punya
+  // 'profile-id' dari kunjungan sebelumnya, jadi dipakai ulang.
+  // Efeknya di Hall of Fame: skor terbaik pemain yang sama sekarang nge-update
+  // SATU entri (bukan numpuk entri baru tiap kali dia main/mati lagi).
+  let nameLocked = false; // true kalau nama udah pernah disave sebelumnya -> gak boleh diketik ulang
+
+  // toggle tampilan input nama vs tampilan nama-terkunci di layar join.
+  // Dipanggil tiap kali layar join bakal kelihatan (awal load, abis respawn,
+  // abis "Simpan & Keluar") supaya statusnya selalu update.
+  function applyNameLockUi(){
+    if(nameLocked && myName){
+      $('nameInput').classList.add('hidden');
+      $('lockedNameDisplay').classList.remove('hidden');
+      $('lockedNameText').textContent = myName;
+    } else {
+      $('nameInput').classList.remove('hidden');
+      $('lockedNameDisplay').classList.add('hidden');
+    }
+  }
+
+  async function loadSavedProfile(){
+    let hasSaved = false;
+    try{
+      const idRes = await window.storage.get('profile-id', false);
+      if(idRes && idRes.value){
+        myId = idRes.value; // pemain lama — pakai ID yang sudah pernah dipakai
+      }
+      const nameRes = await window.storage.get('profile-name', false);
+      if(nameRes && nameRes.value){
+        $('nameInput').value = nameRes.value;
+        myName = nameRes.value; // biar lockedNameDisplay langsung punya nilai walau belum sempat startGame()
+        nameLocked = true; // sudah pernah input nama -> kunci, gak boleh ganti lagi
+        hasSaved = true;
+      }
+      const colorRes = await window.storage.get('profile-color', false);
+      if(colorRes && colorRes.value){
+        const hue = Number(colorRes.value);
+        if(!isNaN(hue) && hue >= 0 && hue <= 359){
+          hueSlider.value = hue;
+          setColorFromHue(hue);
+        }
+      }
+      const headRes = await window.storage.get('profile-head', false);
+      if(headRes && headRes.value){
+        const hidx = HEADS.indexOf(headRes.value);
+        if(hidx >= 0){
+          myHead = headRes.value;
+          document.querySelectorAll('.headOpt').forEach((s,i) => {
+            s.classList.toggle('selected', i === hidx);
+          });
+        }
+      }
+      const mutedRes = await window.storage.get('profile-muted', false);
+      if(mutedRes && mutedRes.value === '1'){ soundMuted = true; }
+      applyMuteUi();
+    }catch(e){ /* first time, no saved profile yet */ }
+    applyNameLockUi();
+    return hasSaved;
+  }
+
+  async function saveProfile(){
+    try{
+      await window.storage.set('profile-id', myId, false);
+      await window.storage.set('profile-name', myName, false);
+      await window.storage.set('profile-color', String(hueSlider.value), false);
+      await window.storage.set('profile-head', myHead, false);
+    }catch(e){ /* ignore, non-critical */ }
+  }
+
+  // auto-join on load if a name is already saved — skips the join screen entirely
+  (async function autoJoinIfKnown(){
+    const hasSaved = await loadSavedProfile();
+    if(hasSaved){
+      startGame();
+    }
+  })();
+
+  $('changeNameBtn').addEventListener('click', () => {
+    // simpan profil, lalu keluar lewat alur "mati" yang sama supaya
+    // skor ikut tersimpan ke papan skor — cuma beda alasannya
+    saveProfile();
+    if(alive && myId) die('keluar');
+  });
+
+  // ============ JOIN ============
+  $('playBtn').addEventListener('click', () => {
+    // "unlock" audio di beberapa browser mobile: mainkan sekali lalu pause
+    // segera, dipicu langsung dari gesture user (klik tombol ini) — biar
+    // playCrashSound()/playRemoteCrashSound() nanti pas tabrakan gak keblokir
+    // autoplay policy.
+    try{
+      // Unlock semua elemen audio di kedua pool sekaligus, biar semuanya
+      // udah "dipanaskan" browser dan siap dipakai bergantian nanti pas
+      // tabrakan (bukan cuma satu elemen kayak sebelumnya).
+      [...CROTT_POOL, ...OAHH_POOL].forEach(a => {
+        const wasVolume = a.volume;
+        a.volume = 0;
+        a.play().then(()=>{ a.pause(); a.currentTime = 0; a.volume = wasVolume; }).catch(()=>{ a.volume = wasVolume; });
+      });
+    }catch(e){}
+    startGame();
+  });
+  $('nameInput').addEventListener('keydown', e => { if(e.key === 'Enter') startGame(); });
+
+  // ============ MANUAL CLEANUP (jaring pengaman tambahan) ============
+  // GC otomatis (gcStalePlayers + trim leaderboard di refreshHof) sudah jalan
+  // sendiri tiap ada client yang connect. Tombol ini cuma buat pemicu manual —
+  // langsung jalanin siklus GC dan trim-leaderboard SEKARANG (bukan nunggu
+  // interval berikutnya), berguna kalau pemain mau mastiin arena bersih
+  // sebelum mulai main, tanpa perlu hapus seluruh database secara manual.
+  $('cleanupBtn').addEventListener('click', async () => {
+    const btn = $('cleanupBtn');
+    btn.disabled = true;
+    btn.textContent = 'membersihkan…';
+    btn.classList.remove('done');
+    try{
+      gcStalePlayers();
+      await refreshHof();
+      await refreshLobbyPreview();
+    }catch(e){ /* best effort */ }
+    btn.textContent = '✓ dibersihkan';
+    btn.classList.add('done');
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = '🧹 Refreh game';
+      btn.classList.remove('done');
+    }, 2500);
+  });
+
+  async function startGame(){
+    // kalau nama udah terkunci, JANGAN baca dari input (yang lagi disembunyikan
+    // dan gak boleh diedit) — pakai nama yang sudah tersimpan biar gak ke-reset
+    // ke placeholder acak kalau input-nya kosong/gak sempat keisi.
+    let nm = nameLocked && myName ? myName : $('nameInput').value.trim();
+    if(!nm) nm = 'Ular' + Math.floor(Math.random()*900+100);
+    myName = nm.slice(0,12);
+    if(!myId) myId = randId(); // ID baru CUMA kalau belum pernah kesave (user baru) — kalau sudah ada (dari loadSavedProfile), dipakai ulang
+    nameLocked = true; // begitu nama kepakai buat masuk arena (baru atau lama), kunci dari sini
+    saveProfile();
+    applyNameLockUi();
+    connectLootStream(); // myId sudah pasti ada dari titik ini — buka jalur buat nerima skor rebutan
+
+    resetSnake();
+
+    // Sebelum masuk arena: pastikan dulu daftar pemain yang SUDAH ada di room
+    // (kalau ada) benar-benar sinkron. Kalau langsung ditampilkan tanpa nunggu
+    // ini, sesaat setelah masuk arena bisa kelihatan kosong dulu baru
+    // pemain-pemain lain "muncul dadakan" satu-satu begitu event SSE nyampe —
+    // bahaya juga secara gameplay karena posisi/tabrakan kita dihitung dari
+    // `others`, yang saat itu belum lengkap.
+    const btn = $('playBtn');
+    const originalBtnText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'menyinkronkan…';
+
+    await Promise.all([ ensureFood(), waitForInitialPlayerSync() ]);
+    recomputeOthers(); // isi `others` dari rawPlayers yang sudah sinkron, SEBELUM layar arena ditampilkan
+
+    btn.disabled = false;
+    btn.textContent = originalBtnText;
+
+    $('screen-join').classList.add('hidden');
+    $('screen-dead').classList.add('hidden');
+    $('screen-game').classList.remove('hidden');
+    $('changeNameBtn').classList.add('visible');
+    $('myNameTag').textContent = myName;
+    $('scoreNum').textContent = formatScoreDisplay(score);
+    resizeCanvas();
+
+    alive = true;
+    angle = 0;
+    camAngle = 0;
+    setGear(0);
+    headLight.color.set(myColor.hex);
+
+    publishSelf();
+  }
+
+  function resetSnake(){
+    let start;
+    do {
+      start = { x: 3 + Math.random()*(COLS-6), y: 3 + Math.random()*(ROWS-6) };
+    } while(ROCK_POS.some(rock => Math.hypot(wrapDelta(start.x-rock.x, COLS), wrapDelta(start.y-rock.y, ROWS)) < 4.5));
+    head = { x: start.x, y: start.y };
+    angle = 0;
+    trail = []; distSinceTrail = 0; mySegsCache = [];
+    bodyLen = 3;
+    score = 0;
+    lastLiveSubmitScore = 0;
+    braking = false;
+    paused = false;
+    pauseOverlay.classList.add('hidden');
+    myChatMsg = ''; myChatTs = 0;
+    myKillCount = 0; myKillMsg = ''; myKillTs = 0;
+    brakeBtn.classList.remove('active');
+    brakeBtn.textContent = 'REM';
+    chatPrompt.classList.add('hidden');
+    chatBox.classList.add('hidden');
+  }
+
+  // walk backward from the head through the recorded trail, dropping a body
+  // segment every SEG_SPACING units of distance. count includes the head itself.
+  function computeSnakeBody(count){
+    const pts = [head];
+    for(let i = trail.length-1; i>=0; i--) pts.push(trail[i]);
+    const segs = [];
+    let distAcc = 0, want = SEG_SPACING;
+    for(let i=1; i<pts.length && segs.length < count-1; i++){
+      const a = pts[i-1], b = pts[i];
+      const dx = b.x-a.x, dy = b.y-a.y;
+      if(Math.abs(dx) > COLS/2 || Math.abs(dy) > ROWS/2) continue; // wrap jump, skip
+      const segLen = Math.hypot(dx,dy);
+      if(segLen === 0) continue;
+      while(distAcc + segLen >= want && segs.length < count-1){
+        const t = (want-distAcc)/segLen;
+        segs.push({ x: a.x+dx*t, y: a.y+dy*t });
+        want += SEG_SPACING;
+      }
+      distAcc += segLen;
+    }
+    return [head, ...segs];
+  }
+
+  // ============ FOOD ============
+  async function ensureFood(){
+    let list = await fbGet('food');
+    if(!Array.isArray(list)) list = [];
+    if(list.length < FOOD_COUNT){
+      while(list.length < FOOD_COUNT) list.push(randCell());
+      await fbPut('food', list);
+    }
+    foodList = list;
+  }
+
+  // spreads a fixed budget of points evenly across the WHOLE body (head to true
+  // tail tip) instead of truncating from the head — keeps the payload bounded
+  // no matter how long the snake gets, while making sure every part of the body
+  // still has at least some collision points (no permanently "safe" tail zone)
+  function downsampleSegs(segs, maxPoints){
+    if(segs.length <= maxPoints) return segs;
+    const out = new Array(maxPoints);
+    const step = (segs.length - 1) / (maxPoints - 1);
+    for(let i=0; i<maxPoints; i++) out[i] = segs[Math.round(i*step)];
+    return out;
+  }
+
+  // ============ NETWORK PUBLISH ============
+  // bulatkan ke 2 desimal sebelum kirim — presisi segitu gak kelihatan bedanya
+  // secara visual, tapi tiap angka di JSON jadi lebih pendek (mis. 42.837291028
+  // -> 42.84), lumayan motong ukuran payload yang dikirim tiap 130ms
+  function roundSegs(segs){
+    const out = new Array(segs.length);
+    for(let i=0;i<segs.length;i++){
+      out[i] = { x: Math.round(segs[i].x*100)/100, y: Math.round(segs[i].y*100)/100 };
+    }
+    return out;
+  }
+
+  async function publishSelf(){
+    if(!myId) return;
+    const fullSegs = computeSnakeBody(bodyLen);
+    const segs = roundSegs(downsampleSegs(fullSegs, MAX_NET_SEGMENTS));
+    const payload = {
+      name: myName, color: myColor, head: myHead, body: segs,
+      score, alive, lastUpdate: Date.now(),
+      chatMsg: myChatMsg, chatTs: myChatTs,
+      killMsg: myKillMsg, killTs: myKillTs, killCount: myKillCount
+    };
+    await fbPut('players/' + myId, payload);
+  }
+
+  function updateBoard2(){
+    const rows = Object.values(others).concat(alive ? [{name:myName, color:myColor, score}] : []);
+    rows.sort((a,b)=>b.score-a.score);
+    $('boardRows').innerHTML = rows.slice(0,6).map(p =>
+      `<div class="row"><span class="nm" style="color:${p.color.hex}">${escapeHtml(p.name)}</span><span class="sc">${formatScoreDisplay(p.score)}</span></div>`
+    ).join('') || '<div class="row"><span class="sc">belum ada data</span></div>';
+  }
+
+  // ============ INPUT — analog rudder steering (works with the 3D chase camera) ============
+  let steerInput = 0; // -1 (turn left) .. 1 (turn right), 0 = go straight — raw input dari mouse/keyboard/joystick
+  let steerSmooth = 0; // nilai yang benar-benar dipakai buat belok, ngejar steerInput pelan-pelan biar gerakan kecil di input gak bikin badan ular nyentak/goyang
+
+  // desktop: cursor position left/right of canvas center steers the snake, like a wheel
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    steerInput = Math.max(-1, Math.min(1, nx));
+  });
+  canvas.addEventListener('mouseleave', () => { steerInput = 0; });
+
+  // mobile: block touches on the arena itself — otherwise a tap fires a
+  // synthetic mousemove (touch-to-mouse emulation) that sets steerInput
+  // once and never resets, effectively "locking" the steering direction
+  canvas.addEventListener('touchstart', e => e.preventDefault(), {passive:false});
+  canvas.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
+
+  // keyboard fallback
+  const keysHeld = { left:false, right:false };
+  function applyKeySteer(){
+    if(keysHeld.left && !keysHeld.right) steerInput = -1;
+    else if(keysHeld.right && !keysHeld.left) steerInput = 1;
+    else if(!keysHeld.left && !keysHeld.right) steerInput = 0;
+  }
+  window.addEventListener('keydown', e => {
+    if(document.activeElement === chatInput) return;
+    if(e.code === 'Space'){ e.preventDefault(); if(alive) setBraking(!braking); return; }
+    const k = e.key.toLowerCase();
+    if(k==='arrowleft'||k==='a') keysHeld.left = true;
+    if(k==='arrowright'||k==='d') keysHeld.right = true;
+    applyKeySteer();
+  });
+  window.addEventListener('keyup', e => {
+    if(document.activeElement === chatInput) return;
+    const k = e.key.toLowerCase();
+    if(k==='arrowleft'||k==='a') keysHeld.left = false;
+    if(k==='arrowright'||k==='d') keysHeld.right = false;
+    applyKeySteer();
+  });
+
+  // mobile: virtual analog joystick — how far left/right you tilt it sets the turn amount
+  const joyBase = $('joystick'), joyKnob = $('joyKnob');
+  const JOY_RADIUS = 40, JOY_DEADZONE = 6;
+  let joyActive = false, joyCenter = {x:0,y:0}, joyTouchId = null;
+
+  function joyUpdateFromPoint(clientX, clientY){
+    const dx = clientX - joyCenter.x, dy = clientY - joyCenter.y;
+    const cx = Math.max(-JOY_RADIUS, Math.min(JOY_RADIUS, dx));
+    const cy = Math.max(-JOY_RADIUS, Math.min(JOY_RADIUS, dy));
+    joyKnob.style.transform = `translate(${cx}px, ${cy}px)`;
+    steerInput = Math.abs(dx) > JOY_DEADZONE ? Math.max(-1, Math.min(1, dx/JOY_RADIUS)) : 0;
+  }
+  function findTouchById(touchList, id){
+    for(let i=0;i<touchList.length;i++){
+      if(touchList[i].identifier === id) return touchList[i];
+    }
+    return null;
+  }
+  function joyStart(e){
+    const rect = joyBase.getBoundingClientRect();
+    joyCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+    if(e.changedTouches){
+      // only latch onto the *specific* finger that landed on the joystick —
+      // other fingers touching other buttons (e.g. brake) must not affect it
+      const t = e.changedTouches[0];
+      joyTouchId = t.identifier;
+      joyActive = true;
+      joyUpdateFromPoint(t.clientX, t.clientY);
+    } else {
+      joyActive = true;
+      joyUpdateFromPoint(e.clientX, e.clientY);
+    }
+  }
+  function joyUpdate(e){
+    if(!joyActive) return;
+    if(e.touches){
+      const t = findTouchById(e.touches, joyTouchId);
+      if(!t) return; // our finger isn't in this event, ignore
+      joyUpdateFromPoint(t.clientX, t.clientY);
+    } else {
+      joyUpdateFromPoint(e.clientX, e.clientY);
+    }
+  }
+  function joyEnd(){ joyActive = false; joyTouchId = null; joyKnob.style.transform = 'translate(0,0)'; steerInput = 0; }
+  function joyEndTouch(e){
+    if(e.changedTouches){
+      // only end the joystick if the finger that lifted is the one that started it —
+      // lifting a different finger (e.g. off the brake button) must not stop steering
+      if(!findTouchById(e.changedTouches, joyTouchId)) return;
+    }
+    joyEnd();
+  }
+
+  joyBase.addEventListener('touchstart', e => { e.preventDefault(); joyStart(e); }, {passive:false});
+  joyBase.addEventListener('touchmove', e => { e.preventDefault(); joyUpdate(e); }, {passive:false});
+  joyBase.addEventListener('touchend', e => { e.preventDefault(); joyEndTouch(e); }, {passive:false});
+  joyBase.addEventListener('touchcancel', e => { e.preventDefault(); joyEndTouch(e); }, {passive:false});
+  joyBase.addEventListener('mousedown', e => { joyStart(e); });
+  window.addEventListener('mousemove', e => { if(joyActive) joyUpdate(e); });
+  window.addEventListener('mouseup', () => { if(joyActive) joyEnd(); });
+
+  // ============ BRAKE + CHAT ============
+  const brakeBtn = $('brakeBtn');
+  const chatPrompt = $('chatPrompt');
+  const chatBox = $('chatBox');
+  const chatInput = $('chatInput');
+  const chatSendBtn = $('chatSendBtn');
+  const pauseOverlay = $('pauseOverlay');
+  const resumeBtn = $('resumeBtn');
+
+  function setBraking(v){
+    braking = v;
+    brakeBtn.classList.toggle('active', braking);
+    brakeBtn.textContent = braking ? 'JALAN' : 'REM';
+    chatPrompt.classList.toggle('hidden', !braking);
+    chatBox.classList.add('hidden');
+    chatInput.blur();
+  }
+
+  // handles its own touch immediately (no 300ms click delay, no interference
+  // from other fingers held elsewhere e.g. on the joystick) while still
+  // working with a plain mouse click on desktop
+  function addTapHandler(el, fn){
+    let touched = false;
+    el.addEventListener('touchstart', e => {
+      e.preventDefault();
+      touched = true;
+      fn();
+    }, {passive:false});
+    el.addEventListener('click', () => {
+      if(touched){ touched = false; return; }
+      fn();
+    });
+  }
+
+  addTapHandler(brakeBtn, () => { if(alive) setBraking(!braking); });
+
+  const gearBtns = document.querySelectorAll('.gearBtn');
+  function setGear(g){
+    speedGear = g;
+    SPEED = GEAR_SPEEDS[speedGear];
+    gearBtns.forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.gear) === speedGear);
+    });
+  }
+  gearBtns.forEach(btn => {
+    addTapHandler(btn, () => {
+      if(!alive) return;
+      setGear(Number(btn.dataset.gear));
+    });
+  });
+  setGear(0); // mulai di gigi 1 (kecepatan dasar)
+
+  addTapHandler(chatPrompt, () => {
+    chatPrompt.classList.add('hidden');
+    chatBox.classList.remove('hidden');
+    chatInput.focus();
+  });
+
+  function sendChat(){
+    const text = chatInput.value.trim();
+    if(text){
+      myChatMsg = text.slice(0, 40);
+      myChatTs = Date.now();
+      publishSelf();
+    }
+    chatInput.value = '';
+    chatInput.blur();
+    chatBox.classList.add('hidden');
+    if(braking) chatPrompt.classList.remove('hidden');
+  }
+  addTapHandler(chatSendBtn, sendChat);
+  chatInput.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if(e.key === 'Enter') sendChat();
+  });
+
+  addTapHandler(resumeBtn, () => {
+    if(!alive || !paused) return;
+    // reposisi ke titik aman (jauh dari tembok & ular lain) dan buang trail
+    // lama — kalau posisi lama dipertahankan, badan ularnya bakal "meloncat"
+    // sepanjang peta dari posisi terakhir sebelum dijeda ke posisi sekarang,
+    // dan berpotensi nongol tepat di badan pemain lain yang udah gerak
+    // selama kita di-background.
+    const spot = findSafeSpawnPoint();
+    head = { x: spot.x, y: spot.y };
+    angle = Math.random() * Math.PI * 2;
+    camAngle = angle;
+    trail = []; distSinceTrail = 0;
+    mySegsCache = computeSnakeBody(bodyLen);
+    pauseOverlay.classList.add('hidden');
+    paused = false;
+    lastFrameT = null;
+    publishSelf();
+  });
+
+  // ============ GAME LOOP — continuous analog movement ============
+  function simulate(dt){
+    const steerAlpha = 1 - Math.exp(-STEER_SMOOTH_RATE*dt); // frame-rate independent exponential smoothing
+    steerSmooth += (steerInput - steerSmooth) * steerAlpha;
+    angle = normalizeAngle(angle + steerSmooth*TURN_RATE*dt);
+
+    const dist = braking ? 0 : SPEED * dt;
+    let nx = head.x + Math.cos(angle)*dist;
+    let ny = head.y + Math.sin(angle)*dist;
+    if(nx < 0) nx += COLS; else if(nx >= COLS) nx -= COLS;
+    if(ny < 0) ny += ROWS; else if(ny >= ROWS) ny -= ROWS;
+
+    distSinceTrail += dist;
+    if(distSinceTrail >= MIN_TRAIL_STEP){
+      trail.push({ x: head.x, y: head.y });
+      distSinceTrail = 0;
+      // evict one oldest point at a time, not in a big batch — a bulk trim
+      // instantly deletes the point the tail tip was using, which snaps the
+      // visible tail forward. One-at-a-time keeps it perfectly smooth.
+      if(trail.length > TRAIL_MAX) trail.shift();
+    }
+
+    head = { x: nx, y: ny };
+    mySegsCache = computeSnakeBody(bodyLen);
+
+    checkFood();
+    if(alive) checkCollisions();
+  }
+
+  function checkFood(){
+    for(let i=0;i<foodList.length;i++){
+      const f = foodList[i];
+      if(!f) continue;
+      const dx = wrapDelta(head.x-f.x, COLS), dy = wrapDelta(head.y-f.y, ROWS);
+      if(Math.hypot(dx,dy) < FOOD_R){
+        score += 5; // tiap makan +5 skor (sebelumnya +1) — cuma poin tampilan, gak ngaruh panjang beneran
+        bodyLen++; // panjang ular BENERAN cuma nambah 1 tiap makan
+        foodList[i] = randCell();
+        // write only this one slot — writing the whole array here races with
+        // other players eating other food at the same time: whoever's stale
+        // full-array write lands last silently reverts everyone else's catch,
+        // making eaten food look like it "respawns" right back where it was.
+        fbPut(`food/${i}`, foodList[i]);
+        $('scoreNum').textContent = formatScoreDisplay(score);
+        maybeLiveSubmit();
+        break;
+      }
+    }
+  }
+
+  function checkCollisions(){
+    for(let rockIndex=0; rockIndex<ROCK_POS.length; rockIndex++){
+      const rock = ROCK_POS[rockIndex];
+      const rockDx = wrapDelta(head.x - rock.x, COLS);
+      const rockDz = wrapDelta(head.y - rock.y, ROWS);
+      if(Math.hypot(rockDx, rockDz) < ROCK_R * 0.95){
+        const victimName = (typeof myName !== 'undefined' && myName) ? myName : 'Pemain';
+        const victimEvent = { name: victimName, ts: Date.now(), id: (myId || Math.random().toString(36).slice(2)) };
+        fbPost(`rockCasualties/${rockIndex}`, victimEvent);
+        rockCasualties[rockIndex]++;
+        rockLastVictims[rockIndex] = victimName;
+        updateRockBoards();
+        playCrashSound();
+        die('menabrak batu', null, true);
+        return;
+      }
+    }
+    for(let i=SELF_SKIP;i<mySegsCache.length;i++){
+      const s = mySegsCache[i];
+      const dx = wrapDelta(head.x-s.x, COLS), dy = wrapDelta(head.y-s.y, ROWS);
+      // nabrak badan sendiri: gak ada "pembunuh" buat direbut skornya — skor
+      // hilang begitu aja, sama kayak alasan mati lain (mis. "keluar")
+      if(Math.hypot(dx,dy) < (HEAD_R+BODY_R)*0.85){ playCrashSound(); die('kejegal badan sendiri', null, true); return; }
+    }
+    for(const pid in others){
+      const p = others[pid];
+      const segs = otherSegsCache[pid];
+      if(!segs || !segs.length) continue;
+      for(const s of segs){
+        const dx = wrapDelta(head.x-s.x, COLS), dy = wrapDelta(head.y-s.y, ROWS);
+        // ditabrak ular pemain lain: skor kita direbut si empunya badan (pid)
+        if(Math.hypot(dx,dy) < (HEAD_R+BODY_R)*0.85){ playCrashSound(); die('ditabrak ular ' + p.name, pid, true); return; }
+      }
+    }
+  }
+
+  let lastFrameT = null;
+  function frame(ts){
+    if(lastFrameT === null) lastFrameT = ts;
+    const dt = Math.min((ts - lastFrameT)/1000, 0.05);
+    lastFrameT = ts;
+    if(alive && !paused){
+      const now = Date.now();
+      refreshOtherSegsCache(now); // same positions feed both the collision check and the render this frame
+      simulate(dt);
+      render3D(now, dt);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  setInterval(() => { if(alive && !paused) publishSelf(); }, 130);
+
+  // ============ BACKGROUND / RECONNECT HANDLING ============
+  // Daripada nebak-nebak siapa yang masih "beneran" ada di room pas koneksi
+  // sempat putus-nyambung, game langsung dijeda total begitu app pindah ke
+  // background. Karena kita berhenti publish, klien lain otomatis melihat
+  // kita "offline" lewat mekanisme staleness yang sudah ada — gak perlu
+  // trik/asumsi tambahan buat itu. Begitu balik aktif, gak langsung lanjut
+  // otomatis: munculin tombol dulu, dan waktu dipencet, posisi kita digeser
+  // ke titik aman (jauh dari ular lain) biar gak dadakan nongol nabrak
+  // orang yang udah gerak selama kita pergi.
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'hidden'){
+      if(alive) paused = true;
+    } else if(document.visibilityState === 'visible'){
+      lastFrameT = null; // avoid one huge dt frame from the time spent backgrounded
+      // koneksi SSE bisa diam-diam mati selama di-background (umum di HP) tanpa
+      // sempat trigger onerror — paksa reconnect biar dapat data terbaru dulu
+      // sebelum pemain sempat pencet Lanjutkan.
+      connectPlayerStream();
+      connectFoodStream();
+      if(myId) connectLootStream();
+      if(alive && paused){
+        pauseOverlay.classList.remove('hidden');
+      } else if(alive){
+        publishSelf();
+      }
+    }
+  });
+
+  function die(reason, killerId, isCollision){
+    alive = false;
+    paused = false;
+    pauseOverlay.classList.add('hidden');
+    braking = false;
+    chatPrompt.classList.add('hidden');
+    chatBox.classList.add('hidden');
+    brakeBtn.classList.remove('active');
+    brakeBtn.textContent = 'REM';
+    deathReason = reason;
+    // Skor cuma pindah tangan kalau ada pembunuhnya (ditabrak ular pemain lain).
+    // Nabrak badan sendiri / keluar / dsb -> gak ada killerId -> skor cuma
+    // hilang, gak dikasihkan ke siapa-siapa.
+    if(killerId) awardKillScoreTo(killerId, score);
+    if(isCollision){
+      // "Ping" tabrakan buat pemain LAIN (bukan buat kita — suara kita sendiri
+      // udah dimainin lokal lewat playCrashSound() di titik pemanggilan die()).
+      // Ditulis ke sub-path players/{myId}/crashAt lalu buru-buru dihapus
+      // (di-await dulu biar urutannya kekirim duluan sebelum delete) — jadi
+      // event ini gak nyampah permanen di Firebase, otomatis lenyap bareng
+      // node pemainnya.
+      (async () => {
+        await fbPut(`players/${myId}/crashAt`, { x: head.x, y: head.y, ts: Date.now() });
+        await fbDelete('players/' + myId);
+      })();
+    } else {
+      fbDelete('players/' + myId);
+    }
+    $('deadReason').textContent = reason;
+    $('finalScore').textContent = formatScoreDisplay(score);
+    $('screen-game').classList.add('hidden');
+    $('screen-dead').classList.remove('hidden');
+    $('changeNameBtn').classList.remove('visible');
+    submitScore(score);
+  }
+
+  $('respawnBtn').addEventListener('click', () => {
+    $('screen-dead').classList.add('hidden');
+    $('screen-join').classList.remove('hidden');
+    applyNameLockUi();
+  });
+
+  // ============ CLEANUP ON TAB CLOSE ============
+  // best-effort: fires when tab is closed/navigated away normally.
+  // Marks the snake dead instantly instead of waiting for the 8s stale timeout.
+  // Won't fire on a hard crash or lost network — the stale timeout still covers that case.
+  window.addEventListener('pagehide', () => {
+    if(alive && myId){
+      try{
+        fetch(`${FB_BASE}/${ROOM}/players/${myId}.json`, {
+          method: 'DELETE',
+          keepalive: true
+        });
+      }catch(e){ /* best effort only */ }
+    }
+  });
+
+  // ============ RENDER (3D) ============
+  function render3D(now, dt){
+    const activeIds = new Set();
+    computeLiveRanks();
+    if(alive){
+      // render with the SAME sparse sampling that gets published — so any gap
+      // another player could thread is actually visible on your own screen too,
+      // instead of your tail always looking solid regardless of real collision density
+      const visibleSegs = downsampleSegs(mySegsCache, MAX_NET_SEGMENTS);
+      updateSnakeMeshes('self', visibleSegs, myColor.hex, myHead, myName, myChatMsg, myChatTs, braking ? null : angle, myKillMsg, myKillTs, myKillCount);
+      activeIds.add('self');
+    }
+    for(const pid in others){
+      const p = others[pid];
+      const segsNow = otherSegsCache[pid];
+      if(segsNow && segsNow.length){
+        updateSnakeMeshes(pid, segsNow, p.color.hex, p.head || HEADS[0], p.name, p.chatMsg || '', p.chatTs || 0, null, p.killMsg || '', p.killTs || 0, p.killCount || 0);
+        activeIds.add(pid);
+      }
+    }
+    removeStalePlayers(activeIds);
+    updateFoodMeshes();
+    updateCamera(dt);
+    renderer.render(scene, camera);
+  }
+
+})();
+</script>
+</body>
+</html>
